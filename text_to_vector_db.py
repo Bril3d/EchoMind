@@ -15,6 +15,8 @@ from astra_connection import connect_to_astradb
 # Set the event loop policy before any Cassandra operations
 import eventlet
 
+eventlet.monkey_patch()
+
 # This ensures the eventlet reactor is used for the Cassandra driver
 if "EVENTLET_REACTOR_SETUP" not in globals():
     cassandra.io.eventletreactor.EventletConnection.initialize_reactor()

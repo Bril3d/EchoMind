@@ -1,6 +1,11 @@
 import os
 import streamlit as st
 from dotenv import load_dotenv
+import eventlet
+
+# Set the event loop policy before any Cassandra operations
+eventlet.monkey_patch()
+
 from therapeutic_assistant import (
     generate_therapeutic_response,
     generate_positive_reflection,
@@ -290,38 +295,35 @@ def main():
             )
 
     # User input
-    with st.container():
-        with st.form(key="user_input_form", clear_on_submit=True):
-            placeholder_text = get_placeholder_text(st.session_state.language)
-            user_query = st.text_area(
-                placeholder_text,
-                height=100,
-                key="user_input",
-                label_visibility="collapsed",
-            )
-            col1, col2 = st.columns([4, 1])
-            with col2:
-                button_text = get_button_text(st.session_state.language)
-                submit_button = st.form_submit_button(label=button_text)
+    with st.form(key="user_input_form", clear_on_submit=True):
+        placeholder_text = get_placeholder_text(st.session_state.language)
+        user_query = st.text_area(
+            placeholder_text,
+            height=100,
+            key="user_input",
+            label_visibility="collapsed",
+        )
+        button_text = get_button_text(st.session_state.language)
+        submit_button = st.form_submit_button(label=button_text)
 
-    # Action buttons row
+    # Action buttons row (outside the form)
     col1, col2 = st.columns(2)
 
     # Reflection button
+    # Reflection button
     with col1:
         reflection_text = get_reflection_text(st.session_state.language)
-        reflection_button = st.button(
+        reflection_button = st.form_submit_button(
             reflection_text,
             disabled=len(st.session_state.messages) < 4,
             key="reflection_button",
-            type="primary",
             help="Generate a positive reflection based on your conversation",
         )
 
     # Clear conversation button
     with col2:
         clear_text = get_clear_text(st.session_state.language)
-        clear_button = st.button(
+        clear_button = st.form_submit_button(
             clear_text,
             disabled=len(st.session_state.messages) < 1,
             key="clear_button",

@@ -1,4 +1,5 @@
 .env
+
 __pycache__
 *.pyc
 *.pyo
@@ -14,4 +15,7 @@ __pycache__
 *.log.*.*.*.*.*
 *.log.*.*.*.*.*.*
 
-converations/*
+converations/
+
+.venv/
+flask_sessions/

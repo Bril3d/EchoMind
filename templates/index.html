@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoMind Therapeutic Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 class="app-header">EchoMind</h1>
+            <p class="app-subtitle">A calming presence for your mental wellbeing journey</p>
+            
+            <div class="language-selector">
+                <label for="language-select">Select Language / اختر اللغة / Choisir la langue</label>
+                <select id="language-select">
+                    {% for lang_code, lang_name in language_options %}
+                        <option value="{{ lang_code }}" {% if lang_code == language %}selected{% endif %}>{{ lang_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </header>
+
+        <main>
+            <div id="chat-container">
+                {% if messages|length == 0 %}
+                    <div class="intro-card">
+                        {{ welcome_message|safe }}
+                    </div>
+                {% else %}
+                    {% for message in messages %}
+                        {% if message.role == 'user' %}
+                            <div class="user-message">
+                                {{ message.content }}
+                            </div>
+                        {% else %}
+                            <div class="assistant-message">
+                                {{ message.content }}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+
+                {% if reflection %}
+                    <div class="reflection-container">
+                        <span class="reflection-icon">✨</span> <strong>Reflection:</strong> {{ reflection }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div id="sources-container" class="hidden">
+                <div class="sources-header" onclick="toggleSources()">
+                    <span id="sources-toggle-text">View sources EchoMind consulted</span>
+                    <i class="fas fa-chevron-down" id="sources-chevron"></i>
+                </div>
+                <div class="source-content hidden" id="sources-content"></div>
+            </div>
+
+            <div id="input-container">
+                <textarea id="user-input" placeholder="Share what's on your mind..."></textarea>
+                <button id="send-button" class="primary-button">
+                    <i class="fas fa-paper-plane"></i> Send
+                </button>
+            </div>
+
+            <div id="action-buttons">
+                <button id="reflection-button" class="action-button reflection-button" disabled>
+                    <i class="fas fa-sparkles"></i> Generate Reflection
+                </button>
+                <button id="clear-button" class="action-button clear-button" disabled>
+                    <i class="fas fa-trash-alt"></i> Clear Conversation
+                </button>
+            </div>
+        </main>
+
+        <div id="loading-spinner" class="hidden">
+            <div class="spinner"></div>
+            <p id="thinking-text">EchoMind is reflecting on your message...</p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html> 

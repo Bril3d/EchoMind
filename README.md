@@ -135,6 +135,29 @@ The web app will:
 6. Show the sources of information used in an expandable section
 7. Allow generating reflections on your conversation with the "Generate Reflection" button
 
+## Flask Web Application
+
+The repository also includes a Flask-based version of the web interface, providing an alternative implementation of the therapeutic assistant.
+
+### Features
+
+- All the same features as the Streamlit version
+- Built using Flask, HTML, CSS, and JavaScript
+- Server-side session management with Flask-Session
+- RESTful API endpoints for all app functionality
+
+### Running the Flask App
+
+```
+python app_flask.py
+```
+
+The Flask app will:
+1. Start a local web server at http://localhost:5000
+2. Provide the same core functionality as the Streamlit version
+3. Use server-side sessions to maintain conversation history
+4. Offer a more customizable frontend implementation
+
 ## Multilingual Support
 
 The application supports the following languages:

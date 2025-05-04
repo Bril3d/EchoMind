@@ -9,6 +9,7 @@ load_dotenv()
 
 # Set the event loop policy before any Cassandra operations
 import eventlet
+eventlet.monkey_patch()
 cassandra.io.eventletreactor.EventletConnection.initialize_reactor()
 
 def connect_to_astradb():
