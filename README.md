@@ -23,10 +23,8 @@ This repository contains code to connect to DataStax AstraDB using the Cassandra
 Create a `.env` file in the root directory with the following variables:
 
 ```
-ASTRA_DB_SECURE_BUNDLE_PATH=/path/to/secure-connect-your-database.zip
-ASTRA_DB_CLIENT_ID=your-client-id
-ASTRA_DB_CLIENT_SECRET=your-client-secret
-ASTRA_DB_KEYSPACE=your_keyspace
+ASTRA_DB_APPLICATION_TOKEN=your-application-token
+ASTRA_DB_API_ENDPOINT=https://your-database-id-your-region.apps.astra.datastax.com
 GEMINI_API_KEY=your-gemini-api-key
 ```
 

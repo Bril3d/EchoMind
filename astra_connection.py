@@ -1,78 +1,52 @@
 import os
-from cassandra.cluster import Cluster
-from cassandra.auth import PlainTextAuthProvider
 from dotenv import load_dotenv
-import cassandra
+from astrapy import DataAPIClient
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Set the event loop policy before any Cassandra operations
-import eventlet
-eventlet.monkey_patch()
-cassandra.io.eventletreactor.EventletConnection.initialize_reactor()
 
 def connect_to_astradb():
     """
-    Connect to AstraDB using token-based authentication.
+    Connect to AstraDB using astrapy DataAPIClient.
 
     Required environment variables:
-    - ASTRA_DB_ID: Your database ID
-    - ASTRA_DB_REGION: Your database region
     - ASTRA_DB_APPLICATION_TOKEN: Your application token
-    - ASTRA_DB_KEYSPACE: Keyspace to use (optional)
+    - ASTRA_DB_API_ENDPOINT: Your database API endpoint
 
     Returns:
-        session: Cassandra session object
+        db: AstraDB database client
     """
     # Get credentials from environment variables
-    db_id = os.environ.get("ASTRA_DB_ID")
-    db_region = os.environ.get("ASTRA_DB_REGION")
     token = os.environ.get("ASTRA_DB_APPLICATION_TOKEN")
-    keyspace = os.environ.get("ASTRA_DB_KEYSPACE")
+    api_endpoint = os.environ.get("ASTRA_DB_API_ENDPOINT")
 
     # Validate required environment variables
-    if not all([db_id, db_region, token]):
+    if not all([token, api_endpoint]):
         raise ValueError(
             "Missing required environment variables. Please ensure "
-            "ASTRA_DB_ID, ASTRA_DB_REGION, and ASTRA_DB_APPLICATION_TOKEN are set."
+            "ASTRA_DB_APPLICATION_TOKEN and ASTRA_DB_API_ENDPOINT are set."
         )
 
-    # Set up contact points for the Astra DB connection
-    contact_points = [f"{db_id}-{db_region}.apps.astra.datastax.com"]
-    
-    # Set up authentication
-    auth_provider = PlainTextAuthProvider('token', token)
+    try:
+        # Initialize the client
+        client = DataAPIClient(token)
+        db = client.get_database_by_api_endpoint(api_endpoint)
 
-    # Create cluster connection
-    cluster = Cluster(
-        contact_points=contact_points,
-        auth_provider=auth_provider,
-        port=29042,
-        ssl_context=None,  # SSL context will be created automatically
-        connect_timeout=10,
-        control_connection_timeout=10
-    )
+        print(f"Connected to Astra DB: {db.list_collection_names()}")
+        return db
 
-    # Connect to the cluster
-    session = cluster.connect(keyspace) if keyspace else cluster.connect()
-
-    print(f"Connected to AstraDB cluster")
-    return session
+    except Exception as e:
+        raise Exception(f"Error connecting to AstraDB: {e}")
 
 
 if __name__ == "__main__":
     try:
-        session = connect_to_astradb()
+        db = connect_to_astradb()
 
-        # Example query (uncomment to use)
-        # rows = session.execute("SELECT release_version FROM system.local")
-        # print(f"Cassandra version: {rows.one().release_version}")
-
-        # Close the connection when done
-        session.shutdown()
-        cluster = session.cluster
-        cluster.shutdown()
+        # Example of how to use the database client
+        # collections = db.list_collection_names()
+        # print(f"Available collections: {collections}")
 
     except Exception as e:
         print(f"Error connecting to AstraDB: {e}")
