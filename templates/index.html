@@ -14,13 +14,23 @@
             <h1 class="app-header">EchoMind</h1>
             <p class="app-subtitle">A calming presence for your mental wellbeing journey</p>
             
-            <div class="language-selector">
-                <label for="language-select">Select Language / اختر اللغة / Choisir la langue</label>
-                <select id="language-select">
-                    {% for lang_code, lang_name in language_options %}
-                        <option value="{{ lang_code }}" {% if lang_code == language %}selected{% endif %}>{{ lang_name }}</option>
-                    {% endfor %}
-                </select>
+            <div class="settings-controls">
+                <div class="language-selector">
+                    <label for="language-select">Select Language / اختر اللغة / Choisir la langue</label>
+                    <select id="language-select">
+                        {% for lang_code, lang_name in language_options %}
+                            <option value="{{ lang_code }}" {% if lang_code == language %}selected{% endif %}>{{ lang_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="tts-control">
+                    <label for="tts-toggle">Text-to-Speech</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="tts-toggle" {% if tts_enabled %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
             </div>
         </header>
 
@@ -38,7 +48,8 @@
                             </div>
                         {% else %}
                             <div class="assistant-message">
-                                {{ message.content }}
+                                <div class="message-content">{{ message.content }}</div>
+                                <button class="read-aloud-btn" title="Read aloud"><i class="fas fa-volume-up"></i></button>
                             </div>
                         {% endif %}
                     {% endfor %}
@@ -47,6 +58,7 @@
                 {% if reflection %}
                     <div class="reflection-container">
                         <span class="reflection-icon">✨</span> <strong>Reflection:</strong> {{ reflection }}
+                        <button class="read-aloud-btn" title="Read aloud"><i class="fas fa-volume-up"></i></button>
                     </div>
                 {% endif %}
             </div>

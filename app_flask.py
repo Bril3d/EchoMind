@@ -38,6 +38,8 @@ def index():
         session["language"] = "english"
     if "reflection" not in session:
         session["reflection"] = None
+    if "tts_enabled" not in session:
+        session["tts_enabled"] = False
 
     # Get language info for UI elements
     language = session["language"]
@@ -56,6 +58,7 @@ def index():
         language_name=language_info["name"],
         language_options=language_options,
         welcome_message=get_welcome_message(language),
+        tts_enabled=session["tts_enabled"],
     )
 
 
@@ -138,6 +141,17 @@ def set_language():
 
     session["language"] = language
     return jsonify({"status": "language updated"})
+
+
+@app.route("/api/set_tts", methods=["POST"])
+def set_tts():
+    """API endpoint to toggle text-to-speech setting."""
+    data = request.json
+    tts_enabled = data.get("enabled", False)
+
+    # Update session with the new TTS setting
+    session["tts_enabled"] = bool(tts_enabled)
+    return jsonify({"status": "tts setting updated"})
 
 
 # Helper functions for multilingual support

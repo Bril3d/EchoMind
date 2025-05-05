@@ -12,6 +12,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const sourcesContent = document.getElementById('sources-content');
     const sourcesToggleText = document.getElementById('sources-toggle-text');
     const sourcesChevron = document.getElementById('sources-chevron');
+    const ttsToggle = document.getElementById('tts-toggle');
+
+    // Text-to-speech related variables
+    let currentSpeech = null;
+    let isTtsEnabled = localStorage.getItem('ttsEnabled') === 'true';
+    
+    // Initialize TTS toggle based on saved preference
+    if (ttsToggle) {
+        ttsToggle.checked = isTtsEnabled;
+    }
 
     // Failsafe: Ensure spinner is hidden on page load
     loadingSpinner.classList.add('hidden');
@@ -34,7 +44,10 @@ document.addEventListener('DOMContentLoaded', () => {
             hideSources: "Hide sources",
             reflectionBtn: "✨ Generate Reflection",
             clearBtn: "Clear Conversation",
-            send: "Send"
+            send: "Send",
+            ttsEnabled: "Text-to-Speech Enabled",
+            ttsDisabled: "Text-to-Speech Disabled",
+            readAloud: "Read Aloud"
         },
         arabic: {
             thinking: "إيكو مايند يفكر في رسالتك...",
@@ -42,7 +55,10 @@ document.addEventListener('DOMContentLoaded', () => {
             hideSources: "إخفاء المصادر",
             reflectionBtn: "✨ إنشاء تفكير",
             clearBtn: "مسح المحادثة",
-            send: "إرسال"
+            send: "إرسال",
+            ttsEnabled: "تم تمكين تحويل النص إلى كلام",
+            ttsDisabled: "تم تعطيل تحويل النص إلى كلام",
+            readAloud: "قراءة بصوت عالٍ"
         },
         french: {
             thinking: "EchoMind réfléchit à votre message...",
@@ -50,7 +66,10 @@ document.addEventListener('DOMContentLoaded', () => {
             hideSources: "Masquer les sources",
             reflectionBtn: "✨ Générer une réflexion",
             clearBtn: "Effacer la conversation",
-            send: "Envoyer"
+            send: "Envoyer",
+            ttsEnabled: "Synthèse vocale activée",
+            ttsDisabled: "Synthèse vocale désactivée",
+            readAloud: "Lire à haute voix"
         }
     };
 
@@ -65,6 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
         reflectionButton.innerHTML = `<i class="fas fa-sparkles"></i> ${text.reflectionBtn}`;
         clearButton.innerHTML = `<i class="fas fa-trash-alt"></i> ${text.clearBtn}`;
         sendButton.innerHTML = `<i class="fas fa-paper-plane"></i> ${text.send}`;
+        
+        // Update all read-aloud button titles
+        document.querySelectorAll('.read-aloud-btn').forEach(btn => {
+            btn.title = text.readAloud;
+        });
     }
 
     // Update placeholder text based on language
@@ -91,6 +115,62 @@ document.addEventListener('DOMContentLoaded', () => {
             sourcesChevron.classList.add('fa-chevron-down');
             sourcesToggleText.textContent = uiText[currentLanguage].sources || uiText.english.sources;
         }
+    }
+
+    // Text-to-speech function
+    function speakText(text) {
+        if (!isTtsEnabled) return;
+        
+        // Stop any currently speaking synthesis
+        if (currentSpeech) {
+            window.speechSynthesis.cancel();
+        }
+        
+        // Create a new utterance
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // Set language based on current interface language
+        switch (currentLanguage) {
+            case 'arabic':
+                utterance.lang = 'ar';
+                break;
+            case 'french':
+                utterance.lang = 'fr-FR';
+                break;
+            default:
+                utterance.lang = 'en-US';
+        }
+        
+        // Start speaking
+        window.speechSynthesis.speak(utterance);
+        currentSpeech = utterance;
+        
+        // Handle when speech has finished
+        utterance.onend = () => {
+            currentSpeech = null;
+        };
+    }
+    
+    // Toggle text-to-speech functionality
+    function toggleTts() {
+        isTtsEnabled = ttsToggle.checked;
+        localStorage.setItem('ttsEnabled', isTtsEnabled);
+        
+        if (!isTtsEnabled && currentSpeech) {
+            window.speechSynthesis.cancel();
+            currentSpeech = null;
+        }
+        
+        // Also update server-side setting
+        fetch('/api/set_tts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ enabled: isTtsEnabled })
+        }).catch(error => {
+            console.error('Error saving TTS setting:', error);
+        });
     }
 
     // Helper function to handle fetch API errors
@@ -184,7 +264,30 @@ document.addEventListener('DOMContentLoaded', () => {
     function addMessage(role, content) {
         const messageDiv = document.createElement('div');
         messageDiv.className = role === 'user' ? 'user-message' : 'assistant-message';
-        messageDiv.textContent = content;
+        
+        if (role === 'user') {
+            messageDiv.textContent = content;
+        } else {
+            // For assistant messages, add message content and read-aloud button
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            messageContent.textContent = content;
+            
+            const readButton = document.createElement('button');
+            readButton.className = 'read-aloud-btn';
+            readButton.title = uiText[currentLanguage].readAloud || uiText.english.readAloud;
+            readButton.innerHTML = '<i class="fas fa-volume-up"></i>';
+            readButton.addEventListener('click', () => speakText(content));
+            
+            messageDiv.appendChild(messageContent);
+            messageDiv.appendChild(readButton);
+            
+            // Auto-read if TTS is enabled
+            if (isTtsEnabled) {
+                setTimeout(() => speakText(content), 500);
+            }
+        }
+        
         chatContainer.appendChild(messageDiv);
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
@@ -224,8 +327,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Add new reflection
                 const reflectionDiv = document.createElement('div');
                 reflectionDiv.className = 'reflection-container';
-                reflectionDiv.innerHTML = `<span class="reflection-icon">✨</span> <strong>Reflection:</strong> ${result.data.reflection}`;
+                
+                const contentSpan = document.createElement('span');
+                contentSpan.innerHTML = `<span class="reflection-icon">✨</span> <strong>Reflection:</strong> ${result.data.reflection}`;
+                
+                const readButton = document.createElement('button');
+                readButton.className = 'read-aloud-btn';
+                readButton.title = uiText[currentLanguage].readAloud || uiText.english.readAloud;
+                readButton.innerHTML = '<i class="fas fa-volume-up"></i>';
+                readButton.addEventListener('click', () => speakText(result.data.reflection));
+                
+                reflectionDiv.appendChild(contentSpan);
+                reflectionDiv.appendChild(readButton);
                 chatContainer.appendChild(reflectionDiv);
+                
+                // Auto-read if TTS is enabled
+                if (isTtsEnabled) {
+                    setTimeout(() => speakText(result.data.reflection), 500);
+                }
+                
                 chatContainer.scrollTop = chatContainer.scrollHeight;
             } else {
                 throw new Error(result.error || 'Failed to generate reflection');
@@ -254,13 +374,38 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (result.ok) {
+                // Get welcome message based on current language
+                let welcomeMessage;
+                switch (currentLanguage) {
+                    case 'arabic':
+                        welcomeMessage = `
+                            <h3>مرحبًا بك في إيكو مايند</h3>
+                            <p>أنا هنا للاستماع والدعم وتقديم التوجيه بناءً على المبادئ العلاجية.
+                            شارك أفكارك أو مخاوفك أو مشاعرك، وسأرد بتعاطف وتفهم.</p>
+                            <p>كيف تشعر اليوم؟</p>
+                        `;
+                        break;
+                    case 'french':
+                        welcomeMessage = `
+                            <h3>Bienvenue à EchoMind</h3>
+                            <p>Je suis là pour écouter, soutenir et offrir des conseils basés sur des principes thérapeutiques.
+                            Partagez vos pensées, préoccupations ou sentiments, et je répondrai avec empathie et compréhension.</p>
+                            <p>Comment vous sentez-vous aujourd'hui ?</p>
+                        `;
+                        break;
+                    default: // english
+                        welcomeMessage = `
+                            <h3>Welcome to EchoMind</h3>
+                            <p>I'm here to listen, support, and offer guidance based on therapeutic principles. 
+                            Share your thoughts, concerns, or feelings, and I'll respond with empathy and understanding.</p>
+                            <p>How are you feeling today?</p>
+                        `;
+                }
+                
                 // Clear chat UI
                 chatContainer.innerHTML = `
                     <div class="intro-card">
-                        <h3>Welcome to EchoMind</h3>
-                        <p>I'm here to listen, support, and offer guidance based on therapeutic principles. 
-                        Share your thoughts, concerns, or feelings, and I'll respond with empathy and understanding.</p>
-                        <p>How are you feeling today?</p>
+                        ${welcomeMessage}
                     </div>
                 `;
 
@@ -352,6 +497,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Sources toggle
         document.querySelector('.sources-header').addEventListener('click', toggleSources);
+        
+        // TTS toggle
+        if (ttsToggle) {
+            ttsToggle.addEventListener('change', toggleTts);
+        }
+        
+        // Add click handlers to existing read-aloud buttons
+        document.querySelectorAll('.read-aloud-btn').forEach(button => {
+            const parentMessage = button.closest('.assistant-message, .reflection-container');
+            if (parentMessage) {
+                const contentElement = parentMessage.querySelector('.message-content') || parentMessage;
+                const textToRead = contentElement.textContent.replace('Reflection:', '').trim();
+                button.addEventListener('click', () => speakText(textToRead));
+            }
+        });
     }
 
     // Initialize UI
