@@ -13,6 +13,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const sourcesToggleText = document.getElementById('sources-toggle-text');
     const sourcesChevron = document.getElementById('sources-chevron');
 
+    // Failsafe: Ensure spinner is hidden on page load
+    loadingSpinner.classList.add('hidden');
+    
+    // Failsafe: Add a backup timer to hide spinner after 10 seconds in case something goes wrong
+    function ensureSpinnerHidden() {
+        setTimeout(() => {
+            if (!loadingSpinner.classList.contains('hidden')) {
+                console.warn('Spinner failsafe triggered: hiding spinner after timeout');
+                loadingSpinner.classList.add('hidden');
+            }
+        }, 10000); // 10 seconds timeout
+    }
+
     // UI text based on language
     const uiText = {
         english: {
@@ -80,6 +93,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Helper function to handle fetch API errors
+    async function safeFetch(url, options) {
+        try {
+            const response = await fetch(url, options);
+            
+            // Try to parse the JSON response
+            let data;
+            try {
+                data = await response.json();
+            } catch (jsonError) {
+                console.error('Error parsing JSON response:', jsonError);
+                return { 
+                    ok: false, 
+                    status: response.status,
+                    error: 'Failed to parse server response' 
+                };
+            }
+            
+            // Return combined response
+            return {
+                ok: response.ok,
+                status: response.status,
+                data: data,
+                error: !response.ok ? (data.error || `Error ${response.status}`) : null
+            };
+        } catch (fetchError) {
+            console.error('Network error:', fetchError);
+            return { 
+                ok: false, 
+                status: 0,
+                error: 'Network connection error. Please check your internet connection.'
+            };
+        }
+    }
+
     // Send message to server
     async function sendMessage() {
         const message = userInput.value.trim();
@@ -90,13 +138,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Show loading spinner
         loadingSpinner.classList.remove('hidden');
+        ensureSpinnerHidden(); // Start failsafe timer
+
+        // Add user message to UI immediately
+        addMessage('user', message);
 
         try {
-            // Add user message to UI immediately
-            addMessage('user', message);
-
-            // Send message to server
-            const response = await fetch('/api/send_message', {
+            // Send message to server using safeFetch
+            const result = await safeFetch('/api/send_message', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -104,15 +153,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ message })
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
+            if (result.ok) {
                 // Add assistant response to chat
-                addMessage('assistant', data.response);
+                addMessage('assistant', result.data.response);
 
                 // Update sources if available
-                if (data.sources && data.sources.length > 0) {
-                    updateSources(data.sources);
+                if (result.data.sources && result.data.sources.length > 0) {
+                    updateSources(result.data.sources);
                     sourcesContainer.classList.remove('hidden');
                 } else {
                     sourcesContainer.classList.add('hidden');
@@ -121,13 +168,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Update button states
                 updateButtonStates();
             } else {
-                throw new Error(data.error || 'Failed to get response');
+                throw new Error(result.error || 'Failed to get response');
             }
         } catch (error) {
             console.error('Error sending message:', error);
-            alert(error.message || 'An error occurred while sending your message');
+            // Add error message to chat so user knows something went wrong
+            addMessage('assistant', 'Sorry, I encountered an error processing your message. Please try again.');
         } finally {
-            // Hide loading spinner
+            // Always hide loading spinner, even if there was an error
             loadingSpinner.classList.add('hidden');
         }
     }
@@ -155,18 +203,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Generate reflection
     async function generateReflection() {
         loadingSpinner.classList.remove('hidden');
+        ensureSpinnerHidden(); // Start failsafe timer
 
         try {
-            const response = await fetch('/api/generate_reflection', {
+            // Send request using safeFetch
+            const result = await safeFetch('/api/generate_reflection', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 }
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
+            if (result.ok) {
                 // Remove existing reflection if any
                 const existingReflection = document.querySelector('.reflection-container');
                 if (existingReflection) {
@@ -176,16 +224,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Add new reflection
                 const reflectionDiv = document.createElement('div');
                 reflectionDiv.className = 'reflection-container';
-                reflectionDiv.innerHTML = `<span class="reflection-icon">✨</span> <strong>Reflection:</strong> ${data.reflection}`;
+                reflectionDiv.innerHTML = `<span class="reflection-icon">✨</span> <strong>Reflection:</strong> ${result.data.reflection}`;
                 chatContainer.appendChild(reflectionDiv);
                 chatContainer.scrollTop = chatContainer.scrollHeight;
             } else {
-                throw new Error(data.error || 'Failed to generate reflection');
+                throw new Error(result.error || 'Failed to generate reflection');
             }
         } catch (error) {
             console.error('Error generating reflection:', error);
-            alert(error.message || 'An error occurred while generating the reflection');
+            // Add error message to chat
+            addMessage('assistant', 'Sorry, I encountered an error generating a reflection. Please try again.');
         } finally {
+            // Always hide loading spinner
             loadingSpinner.classList.add('hidden');
         }
     }
@@ -195,13 +245,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!confirm('Are you sure you want to clear the entire conversation?')) return;
 
         loadingSpinner.classList.remove('hidden');
+        ensureSpinnerHidden(); // Start failsafe timer
 
         try {
-            const response = await fetch('/api/clear_conversation', {
+            // Use safeFetch for the request
+            const result = await safeFetch('/api/clear_conversation', {
                 method: 'POST'
             });
 
-            if (response.ok) {
+            if (result.ok) {
                 // Clear chat UI
                 chatContainer.innerHTML = `
                     <div class="intro-card">
@@ -219,12 +271,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 reflectionButton.disabled = true;
                 clearButton.disabled = true;
             } else {
-                throw new Error('Failed to clear conversation');
+                throw new Error(result.error || 'Failed to clear conversation');
             }
         } catch (error) {
             console.error('Error clearing conversation:', error);
-            alert('An error occurred while clearing the conversation');
+            // Show error in chat instead of alert
+            addMessage('assistant', 'Sorry, I encountered an error clearing the conversation. Please try again.');
         } finally {
+            // Always hide loading spinner
             loadingSpinner.classList.add('hidden');
         }
     }
@@ -233,8 +287,13 @@ document.addEventListener('DOMContentLoaded', () => {
     async function changeLanguage() {
         const newLanguage = languageSelect.value;
         
+        // Show loading spinner
+        loadingSpinner.classList.remove('hidden');
+        ensureSpinnerHidden(); // Start failsafe timer
+        
         try {
-            const response = await fetch('/api/set_language', {
+            // Use safeFetch for the request
+            const result = await safeFetch('/api/set_language', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -242,18 +301,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ language: newLanguage })
             });
 
-            if (response.ok) {
+            if (result.ok) {
                 currentLanguage = newLanguage;
                 updateUIText();
                 updatePlaceholder();
                 // Reload to refresh all UI elements
                 window.location.reload();
             } else {
-                throw new Error('Failed to change language');
+                // Hide spinner if there's an error and we don't reload
+                loadingSpinner.classList.add('hidden');
+                throw new Error(result.error || 'Failed to change language');
             }
         } catch (error) {
             console.error('Error changing language:', error);
-            alert('An error occurred while changing the language');
+            // Hide spinner in case of error and reload doesn't happen
+            loadingSpinner.classList.add('hidden');
+            // Show error message in chat
+            addMessage('assistant', 'Sorry, I encountered an error changing the language. Please try again.');
         }
     }
 
@@ -264,23 +328,45 @@ document.addEventListener('DOMContentLoaded', () => {
         clearButton.disabled = messageCount < 1;
     }
 
-    // Event listeners
-    sendButton.addEventListener('click', sendMessage);
-    
-    userInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
-    
-    reflectionButton.addEventListener('click', generateReflection);
-    clearButton.addEventListener('click', clearConversation);
-    languageSelect.addEventListener('change', changeLanguage);
-    document.querySelector('.sources-header').addEventListener('click', toggleSources);
+    // Set up event listeners
+    function setupEventListeners() {
+        // Send message on button click
+        sendButton.addEventListener('click', sendMessage);
 
-    // Initialize
-    updateUIText();
-    updatePlaceholder();
-    updateButtonStates();
+        // Send message on Enter key (Shift+Enter for new line)
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Language change
+        languageSelect.addEventListener('change', changeLanguage);
+
+        // Generate reflection
+        reflectionButton.addEventListener('click', generateReflection);
+
+        // Clear conversation
+        clearButton.addEventListener('click', clearConversation);
+
+        // Sources toggle
+        document.querySelector('.sources-header').addEventListener('click', toggleSources);
+    }
+
+    // Initialize UI
+    function initializeUI() {
+        // Update UI text based on current language
+        updateUIText();
+        updatePlaceholder();
+        
+        // Initial button states
+        updateButtonStates();
+        
+        // Set up event listeners
+        setupEventListeners();
+    }
+
+    // Initialize the UI
+    initializeUI();
 }); 

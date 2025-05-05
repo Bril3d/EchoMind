@@ -140,15 +140,11 @@ def generate_therapeutic_response(
 
         try:
             # Connect to AstraDB
-            session = connect_to_astradb()
-            keyspace = os.environ.get("ASTRA_DB_KEYSPACE")
-
-            if not keyspace:
-                raise ValueError("ASTRA_DB_KEYSPACE environment variable is required")
+            db = connect_to_astradb()
 
             # Retrieve relevant chunks from the vector database
             relevant_chunks = search_similar_text(
-                session=session, keyspace=keyspace, query=user_query, limit=top_k
+                db=db, query=user_query, limit=top_k, collection_name="text_vectors"
             )
 
             # Extract the text from the chunks
@@ -162,10 +158,6 @@ def generate_therapeutic_response(
 
             # Combine the chunks into a single context
             context = "\n\n".join(context_texts)
-
-            # Clean up the AstraDB connection
-            session.shutdown()
-            session.cluster.shutdown()
 
         except Exception as db_error:
             # Log the error but continue without database content

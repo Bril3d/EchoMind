@@ -4,23 +4,12 @@ import uuid
 from typing import List, Dict, Any
 import numpy as np
 from sentence_transformers import SentenceTransformer
-from cassandra.cluster import Cluster, Session
-from cassandra.auth import PlainTextAuthProvider
 from dotenv import load_dotenv
-import cassandra
+from astrapy.info import CollectionDefinition
+from astrapy.constants import VectorMetric
 
 # Import our AstraDB connection function
 from astra_connection import connect_to_astradb
-
-# Set the event loop policy before any Cassandra operations
-import eventlet
-
-eventlet.monkey_patch()
-
-# This ensures the eventlet reactor is used for the Cassandra driver
-if "EVENTLET_REACTOR_SETUP" not in globals():
-    cassandra.io.eventletreactor.EventletConnection.initialize_reactor()
-    EVENTLET_REACTOR_SETUP = True
 
 # Load environment variables
 load_dotenv()
@@ -32,39 +21,31 @@ CHUNK_OVERLAP = 200  # Overlap between chunks
 VECTOR_DIMENSION = 384  # Dimension of the embeddings from MiniLM-L6-v2
 
 
-def setup_vector_table(
-    session: Session, keyspace: str, table_name: str = "text_vectors"
-):
+def setup_vector_collection(db, collection_name: str = "text_vectors"):
     """
-    Create a table in AstraDB for storing vector embeddings if it doesn't exist.
+    Create a collection in AstraDB for storing vector embeddings if it doesn't exist.
 
     Args:
-        session: Cassandra session object
-        keyspace: Keyspace to use
-        table_name: Name of the table to create
+        db: AstraDB database client
+        collection_name: Name of the collection to create
     """
-    # Create the vector table if it doesn't exist
-    session.execute(
-        f"""
-    CREATE TABLE IF NOT EXISTS {keyspace}.{table_name} (
-        id uuid PRIMARY KEY,
-        file_path text,
-        chunk_index int,
-        chunk_text text,
-        embedding vector<float, {VECTOR_DIMENSION}>
-    )
-    """
-    )
+    # Check if collection exists
+    collections = db.list_collection_names()
 
-    # Create a vector index if it doesn't exist
-    session.execute(
-        f"""
-    CREATE CUSTOM INDEX IF NOT EXISTS embedding_index ON {keyspace}.{table_name} (embedding) 
-    USING 'StorageAttachedIndex'
-    """
-    )
-
-    print(f"Vector table '{table_name}' is ready")
+    if collection_name not in collections:
+        # Create the vector collection
+        collection = db.create_collection(
+            collection_name,
+            definition=(
+                CollectionDefinition.builder()
+                .set_vector_dimension(VECTOR_DIMENSION)
+                .set_vector_metric(VectorMetric.COSINE)
+                .build()
+            ),
+        )
+        print(f"Vector collection '{collection_name}' created")
+    else:
+        print(f"Vector collection '{collection_name}' already exists")
 
 
 def chunk_text(
@@ -143,11 +124,11 @@ def process_text_files(
         for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
             all_chunks.append(
                 {
-                    "id": uuid.uuid4(),
+                    "_id": str(uuid.uuid4()),
                     "file_path": os.path.basename(file_path),
                     "chunk_index": i,
                     "chunk_text": chunk,
-                    "embedding": embedding,
+                    "$vector": embedding.tolist(),
                 }
             )
 
@@ -156,66 +137,50 @@ def process_text_files(
 
 
 def store_in_astradb(
-    session: Session,
-    keyspace: str,
+    db,
     chunks: List[Dict[str, Any]],
-    table_name: str = "text_vectors",
+    collection_name: str = "text_vectors",
 ):
     """
     Store chunks and embeddings in AstraDB.
 
     Args:
-        session: Cassandra session object
-        keyspace: Keyspace to use
+        db: AstraDB database client
         chunks: List of dictionaries containing chunks and embeddings
-        table_name: Name of the table to store in
+        collection_name: Name of the collection to store in
     """
-    # Prepare the insert statement
-    insert_stmt = session.prepare(
-        f"""
-        INSERT INTO {keyspace}.{table_name} 
-        (id, file_path, chunk_index, chunk_text, embedding) 
-        VALUES (?, ?, ?, ?, ?)
-    """
-    )
+    # Get the collection
+    collection = db.get_collection(collection_name)
 
     # Insert each chunk
     count = 0
-    for chunk in chunks:
-        session.execute(
-            insert_stmt,
-            (
-                chunk["id"],
-                chunk["file_path"],
-                chunk["chunk_index"],
-                chunk["chunk_text"],
-                chunk["embedding"].tolist(),
-            ),
-        )
-        count += 1
-        if count % 10 == 0:
-            print(f"Inserted {count}/{len(chunks)} chunks")
+    batch_size = 10
+
+    for i in range(0, len(chunks), batch_size):
+        batch = chunks[i : i + batch_size]
+        collection.insert_many(batch)
+
+        count += len(batch)
+        print(f"Inserted {count}/{len(chunks)} chunks")
 
     print(f"Successfully stored {count} chunks in AstraDB")
 
 
 def search_similar_text(
-    session: Session,
-    keyspace: str,
+    db,
     query: str,
     model_name: str = EMBEDDING_MODEL,
-    table_name: str = "text_vectors",
+    collection_name: str = "text_vectors",
     limit: int = 5,
 ):
     """
     Search for text similar to the query in the vector database.
 
     Args:
-        session: Cassandra session object
-        keyspace: Keyspace to use
+        db: AstraDB database client
         query: Text to search for
         model_name: Name of the SentenceTransformer model to use
-        table_name: Name of the table to search in
+        collection_name: Name of the collection to search in
         limit: Maximum number of results to return
 
     Returns:
@@ -225,39 +190,29 @@ def search_similar_text(
     model = SentenceTransformer(model_name)
     query_embedding = model.encode(query)
 
-    # Search for similar chunks using ANN
-    search_stmt = f"""
-        SELECT file_path, chunk_index, chunk_text
-        FROM {keyspace}.{table_name}
-        ORDER BY embedding ANN OF ? LIMIT ?
-    """
+    # Get the collection
+    collection = db.get_collection(collection_name)
 
-    rows = session.execute(search_stmt, (query_embedding.tolist(), limit))
+    # Search for similar chunks using vector search
+    cursor = collection.find(
+        {},  # No filter criteria
+        sort={"$vector": query_embedding.tolist()},
+        limit=limit,
+        include_similarity=True,
+        projection=["file_path", "chunk_index", "chunk_text"],
+    )
 
-    results = []
-    for row in rows:
-        results.append(
-            {
-                "file_path": row.file_path,
-                "chunk_index": row.chunk_index,
-                "chunk_text": row.chunk_text,
-            }
-        )
-
-    return results
+    # Convert cursor to list
+    return list(cursor)
 
 
 def main():
     # Connect to AstraDB
     try:
-        session = connect_to_astradb()
-        keyspace = os.environ.get("ASTRA_DB_KEYSPACE")
+        db = connect_to_astradb()
 
-        if not keyspace:
-            raise ValueError("ASTRA_DB_KEYSPACE environment variable is required")
-
-        # Setup the vector table
-        setup_vector_table(session, keyspace)
+        # Setup the vector collection
+        setup_vector_collection(db)
 
         # Process text files from the given directory
         directory_path = input("Enter the directory containing .txt files: ")
@@ -265,7 +220,7 @@ def main():
 
         if chunks:
             # Store the chunks in AstraDB
-            store_in_astradb(session, keyspace, chunks)
+            store_in_astradb(db, chunks)
 
             # Demo search
             while True:
@@ -273,15 +228,11 @@ def main():
                 if query.lower() == "quit":
                     break
 
-                results = search_similar_text(session, keyspace, query)
+                results = search_similar_text(db, query)
                 print("\nSearch results:")
                 for i, result in enumerate(results, 1):
                     print(f"\n{i}. From: {result['file_path']}")
                     print(f"Chunk: {result['chunk_text'][:200]}...")
-
-        # Clean up
-        session.shutdown()
-        session.cluster.shutdown()
 
     except Exception as e:
         print(f"Error: {e}")

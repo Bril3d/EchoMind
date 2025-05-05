@@ -1,10 +1,5 @@
 import os
 import json
-import eventlet
-
-# Set the event loop policy before any other imports
-eventlet.monkey_patch()
-
 from flask import Flask, render_template, request, jsonify, session
 from flask_session import Session
 from dotenv import load_dotenv
@@ -200,15 +195,15 @@ if __name__ == "__main__":
         )
     else:
         # Check for AstraDB credentials - warning only, not blocking
-        astra_db_id = os.environ.get("ASTRA_DB_ID")
-        astra_keyspace = os.environ.get("ASTRA_DB_KEYSPACE")
+        astra_token = os.environ.get("ASTRA_DB_APPLICATION_TOKEN")
+        astra_endpoint = os.environ.get("ASTRA_DB_API_ENDPOINT")
 
-        if not (astra_db_id and astra_keyspace):
+        if not (astra_token and astra_endpoint):
             print(
                 "Some AstraDB credentials are missing. The app will run, but without knowledge base access."
             )
             print(
-                "For full functionality, please add ASTRA_DB_ID, ASTRA_DB_REGION, ASTRA_DB_APPLICATION_TOKEN, and ASTRA_DB_KEYSPACE to your .env file."
+                "For full functionality, please add ASTRA_DB_APPLICATION_TOKEN and ASTRA_DB_API_ENDPOINT to your .env file."
             )
 
         app.run(debug=True)

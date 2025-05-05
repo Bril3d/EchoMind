@@ -1,6 +1,6 @@
 # AstraDB Python Connection
 
-This repository contains code to connect to DataStax AstraDB using the Cassandra driver and environment variables, as well as tools for processing text files and storing them as vector embeddings.
+This repository contains code to connect to DataStax AstraDB using the astrapy package and environment variables, as well as tools for processing text files and storing them as vector embeddings.
 
 ## Prerequisites
 
@@ -183,18 +183,17 @@ from astra_connection import connect_to_astradb
 from text_to_vector_db import process_text_files, store_in_astradb, search_similar_text
 from therapeutic_assistant import generate_therapeutic_response, generate_positive_reflection
 
-# Get a session
-session = connect_to_astradb()
-keyspace = os.environ.get("ASTRA_DB_KEYSPACE")
+# Get a database connection
+db = connect_to_astradb()
 
 # Process text files
 chunks = process_text_files("/path/to/text/files")
 
 # Store in AstraDB
-store_in_astradb(session, keyspace, chunks)
+store_in_astradb(db, chunks)
 
 # Search for similar text
-results = search_similar_text(session, keyspace, "your search query")
+results = search_similar_text(db, "your search query")
 
 # Generate a therapeutic response in a specific language
 response = generate_therapeutic_response(
@@ -211,10 +210,4 @@ conversation_history = [
 reflection = generate_positive_reflection(
     conversation_history,
     language="english"
-)
-
-# Close the connection when done
-session.shutdown()
-cluster = session.cluster
-cluster.shutdown()
-``` 
+) 

@@ -1,0 +1,30 @@
+Dataset of therapy :
+A therapy dataset, on the other hand, would contain real data collected during therapy sessions. This could include transcriptions of dialogues, patient responses, therapist reactions, and assessments of the patient's condition before and after the sessions.
+Exemple of therapy Dialogue Transcription :
+Therapist (T): Hello, how are you feeling today?
+Patient (P): I’m feeling a bit stressed. I had a big day at work, and I can’t stop thinking about all the things I need to do.
+T: I understand that you’re feeling overwhelmed. Tell me, when you think about all these things to do, how does it make you feel? Physically and emotionally?
+P: It gives me a knot in my stomach, and I feel frustrated, a bit depressed, like I’ll never get through it all.
+T: Alright, it seems like the workload is affecting you on several levels. Have you noticed if these thoughts are always very negative, or sometimes can you think about things in a more balanced way?
+P: Most of the time, they’re negative. I tend to think I’m going to fail and that I’m not good enough.
+T: That sounds like a pretty extreme thought, doesn’t it? Maybe there’s another way to look at things. What do you think might happen if you took things step by step instead of seeing it all at once?
+P: I guess it could help me focus on one task at a time instead of worrying about everything.
+T: Exactly. Let’s take one specific task. What could you do this week to reduce some of that stress but make it more manageable?
+P: Maybe I could start by making a priority list, so I don’t feel so lost.
+T: That’s a great idea. You could also break each task down into smaller steps to make them less overwhelming. How do you feel about doing that?
+P: That seems more doable, yes. It could help me not feel so overwhelmed.
+________________________________________
+Explanation of the Dialogue (Translated)
+In this transcription, we see a typical exchange between a therapist and a patient in a CBT session. The therapist first listens to the patient's concerns, then helps the patient identify negative thoughts (like the idea that they are going to fail) and reframe those thoughts to make them more realistic. The therapist guides the patient through a problem-solving process, suggesting that the patient break tasks down into smaller, more manageable steps.
+This example shows how a dialogue in a therapy session could be structured to help the patient change their thinking and reduce stress.
+Exemples of books :
+Research Methods in Psychology: Evaluating a World of Diversity" (2015) by Beth Morling:
+This book provides an overview of research methods in psychology, including the collection of behavioral and therapeutic data. Although it is not specifically focused on therapy datasets, it contains information on how researchers collect and analyze data in therapeutic contexts.
+"The Handbook of Psychotherapy Integration" (2004) by John C. Norcross:
+This book offers a comprehensive overview of integrated approaches in psychotherapy, with particular attention to treatment evaluation and the use of data. It includes examples of how researchers and clinicians use datasets to measure and compare the effectiveness of different therapeutic approaches.
+"Cognitive Behavioral Therapy: A Guide for the Practicing Clinician" (2011) by Richard G. Heimberg, Cynthia L. Turk, and Deborah A. Mennin:
+Although this book focuses on the practice of CBT (Cognitive Behavioral Therapy), it also provides information on data collection and analysis in the therapeutic context. It discusses the evaluation of patient progress and the importance of collecting data before and after sessions to adjust treatment.
+"Manual of Clinical Psychopharmacology" (2019) by Alan F. Schatzberg and Charles DeBattista:
+This book addresses clinical data in psychopharmacology, but it also covers psychotherapy and the use of datasets to measure treatment effectiveness. Although it is more focused on medication treatments, it also presents data collected during therapeutic sessions.
+
+

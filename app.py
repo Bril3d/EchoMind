@@ -1,10 +1,6 @@
 import os
 import streamlit as st
 from dotenv import load_dotenv
-import eventlet
-
-# Set the event loop policy before any Cassandra operations
-eventlet.monkey_patch()
 
 from therapeutic_assistant import (
     generate_therapeutic_response,
@@ -222,14 +218,13 @@ def main():
         return
 
     # Check for AstraDB credentials - warning only, not blocking
-    astra_db_id = os.environ.get("ASTRA_DB_ID")
-    astra_keyspace = os.environ.get("ASTRA_DB_KEYSPACE")
+    astra_token = os.environ.get("ASTRA_DB_APPLICATION_TOKEN")
+    astra_endpoint = os.environ.get("ASTRA_DB_API_ENDPOINT")
 
-    if not (astra_db_id and astra_keyspace):
+    if not (astra_token and astra_endpoint):
         st.warning(
             "Some AstraDB credentials are missing. The app will run, but without knowledge base access. "
-            "For full functionality, please add ASTRA_DB_ID, ASTRA_DB_REGION, ASTRA_DB_APPLICATION_TOKEN, "
-            "and ASTRA_DB_KEYSPACE to your .env file."
+            "For full functionality, please add ASTRA_DB_APPLICATION_TOKEN and ASTRA_DB_API_ENDPOINT to your .env file."
         )
 
     # Initialize session state

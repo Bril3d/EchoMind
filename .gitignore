@@ -15,7 +15,7 @@ __pycache__
 *.log.*.*.*.*.*
 *.log.*.*.*.*.*.*
 
-converations/
+converations/*
 
 .venv/
-flask_sessions/
+flask_sessions/*

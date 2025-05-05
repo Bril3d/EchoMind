@@ -30,8 +30,9 @@ def connect_to_astradb():
 
     try:
         # Initialize the client
-        client = DataAPIClient(token)
-        db = client.get_database_by_api_endpoint(api_endpoint)
+        client = DataAPIClient()
+        # Connect to the database by providing token during get_database call
+        db = client.get_database(api_endpoint, token=token)
 
         print(f"Connected to Astra DB: {db.list_collection_names()}")
         return db
