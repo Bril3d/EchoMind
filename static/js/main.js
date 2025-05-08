@@ -13,14 +13,43 @@ document.addEventListener('DOMContentLoaded', () => {
     const sourcesToggleText = document.getElementById('sources-toggle-text');
     const sourcesChevron = document.getElementById('sources-chevron');
     const ttsToggle = document.getElementById('tts-toggle');
+    const temperatureSlider = document.getElementById('temperature-slider');
+    let temperatureValue = document.getElementById('temperature-value');
+    
+    // New UI Elements
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    const themeToggle = document.getElementById('theme-toggle');
+    const loginBtn = document.getElementById('login-btn');
+    const signupBtn = document.getElementById('signup-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const loginModal = document.getElementById('login-modal');
+    const signupModal = document.getElementById('signup-modal');
+    const closeModalButtons = document.querySelectorAll('.close-modal');
+    const loginForm = document.getElementById('login-form');
+    const signupForm = document.getElementById('signup-form');
+    const authSection = document.getElementById('auth-section');
+    const userProfile = document.getElementById('user-profile');
+    const usernameDisplay = document.getElementById('username-display');
 
     // Text-to-speech related variables
     let currentSpeech = null;
     let isTtsEnabled = localStorage.getItem('ttsEnabled') === 'true';
     
+    // Authentication state
+    let isLoggedIn = false;
+    let currentUser = null;
+    
     // Initialize TTS toggle based on saved preference
     if (ttsToggle) {
         ttsToggle.checked = isTtsEnabled;
+    }
+    
+    // Initialize theme based on saved preference
+    let isDarkMode = localStorage.getItem('darkMode') === 'true';
+    if (themeToggle) {
+        themeToggle.checked = isDarkMode;
+        setTheme(isDarkMode);
     }
 
     // Failsafe: Ensure spinner is hidden on page load
@@ -47,7 +76,23 @@ document.addEventListener('DOMContentLoaded', () => {
             send: "Send",
             ttsEnabled: "Text-to-Speech Enabled",
             ttsDisabled: "Text-to-Speech Disabled",
-            readAloud: "Read Aloud"
+            readAloud: "Read Aloud",
+            creativityLevel: "AI Creativity Level:",
+            focused: "Focused",
+            creative: "Creative",
+            // Auth related text
+            login: "Login",
+            signup: "Sign Up",
+            logout: "Logout",
+            welcomeBack: "Welcome back, ",
+            loginSuccess: "Login successful!",
+            signupSuccess: "Sign up successful!",
+            loginError: "Login failed. Please check your credentials.",
+            signupError: "Sign up failed. Please try again.",
+            // Tab names
+            chatTab: "Chat",
+            insightsTab: "Insights",
+            resourcesTab: "Resources"
         },
         arabic: {
             thinking: "إيكو مايند يفكر في رسالتك...",
@@ -58,7 +103,23 @@ document.addEventListener('DOMContentLoaded', () => {
             send: "إرسال",
             ttsEnabled: "تم تمكين تحويل النص إلى كلام",
             ttsDisabled: "تم تعطيل تحويل النص إلى كلام",
-            readAloud: "قراءة بصوت عالٍ"
+            readAloud: "قراءة بصوت عالٍ",
+            creativityLevel: "مستوى إبداع الذكاء الاصطناعي:",
+            focused: "مركّز",
+            creative: "إبداعي",
+            // Auth related text
+            login: "تسجيل الدخول",
+            signup: "إنشاء حساب",
+            logout: "تسجيل الخروج",
+            welcomeBack: "مرحبًا بعودتك، ",
+            loginSuccess: "تم تسجيل الدخول بنجاح!",
+            signupSuccess: "تم إنشاء الحساب بنجاح!",
+            loginError: "فشل تسجيل الدخول. يرجى التحقق من بيانات الاعتماد الخاصة بك.",
+            signupError: "فشل إنشاء الحساب. يرجى المحاولة مرة أخرى.",
+            // Tab names
+            chatTab: "دردشة",
+            insightsTab: "رؤى",
+            resourcesTab: "موارد"
         },
         french: {
             thinking: "EchoMind réfléchit à votre message...",
@@ -69,7 +130,23 @@ document.addEventListener('DOMContentLoaded', () => {
             send: "Envoyer",
             ttsEnabled: "Synthèse vocale activée",
             ttsDisabled: "Synthèse vocale désactivée",
-            readAloud: "Lire à haute voix"
+            readAloud: "Lire à haute voix",
+            creativityLevel: "Niveau de créativité de l'IA:",
+            focused: "Concentré",
+            creative: "Créatif",
+            // Auth related text
+            login: "Connexion",
+            signup: "S'inscrire",
+            logout: "Déconnexion",
+            welcomeBack: "Bon retour, ",
+            loginSuccess: "Connexion réussie!",
+            signupSuccess: "Inscription réussie!",
+            loginError: "Échec de la connexion. Veuillez vérifier vos identifiants.",
+            signupError: "Échec de l'inscription. Veuillez réessayer.",
+            // Tab names
+            chatTab: "Discuter",
+            insightsTab: "Aperçus",
+            resourcesTab: "Ressources"
         }
     };
 
@@ -89,6 +166,38 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.read-aloud-btn').forEach(btn => {
             btn.title = text.readAloud;
         });
+        
+        // Update temperature control labels
+        if (temperatureSlider && temperatureValue) {
+            const temperatureLabel = document.querySelector('.temperature-control label');
+            if (temperatureLabel) {
+                // Save the current display value
+                const currentValue = temperatureValue.textContent;
+                // Update the label
+                temperatureLabel.innerHTML = `${text.creativityLevel} <span id="temperature-value">${currentValue}</span>`;
+                // Re-assign the temperatureValue element since we recreated it
+                temperatureValue = document.getElementById('temperature-value');
+            }
+            
+            // Update min/max labels
+            const tempLabels = document.querySelectorAll('.temperature-labels span');
+            if (tempLabels && tempLabels.length === 2) {
+                tempLabels[0].textContent = text.focused;
+                tempLabels[1].textContent = text.creative;
+            }
+        }
+        
+        // Update auth buttons
+        if (loginBtn) loginBtn.textContent = text.login;
+        if (signupBtn) signupBtn.textContent = text.signup;
+        if (logoutBtn) logoutBtn.textContent = text.logout;
+        
+        // Update tab names
+        if (tabButtons && tabButtons.length >= 3) {
+            tabButtons[0].textContent = text.chatTab;
+            tabButtons[1].textContent = text.insightsTab;
+            tabButtons[2].textContent = text.resourcesTab;
+        }
     }
 
     // Update placeholder text based on language
@@ -168,43 +277,211 @@ document.addEventListener('DOMContentLoaded', () => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ enabled: isTtsEnabled })
-        }).catch(error => {
-            console.error('Error saving TTS setting:', error);
+        })
+        .catch(error => console.error('Error updating TTS setting:', error));
+    }
+    
+    // Toggle theme (dark/light mode)
+    function toggleTheme() {
+        const isDark = themeToggle.checked;
+        setTheme(isDark);
+        localStorage.setItem('darkMode', isDark);
+    }
+    
+    // Set theme based on preference
+    function setTheme(isDark) {
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    }
+    
+    // Handle tab switching
+    function switchTab(tabId) {
+        // Hide all tab panes
+        tabPanes.forEach(pane => {
+            pane.classList.remove('active');
         });
+        
+        // Deactivate all tab buttons
+        tabButtons.forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // Activate the selected tab and its content
+        document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
+        document.getElementById(`${tabId}-tab`).classList.add('active');
+    }
+    
+    // Authentication Functions
+    function openModal(modalId) {
+        document.getElementById(modalId).style.display = 'block';
+    }
+    
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+    
+    function handleLogin(event) {
+        event.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        
+        // Simulate login - in a real app, this would call an API
+        if (email && password) {
+            // Mock successful login
+            const username = email.split('@')[0];
+            loginSuccess(username);
+            closeModal('login-modal');
+            
+            // In a real app, you would make an API call like:
+            /*
+            fetch('/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email, password })
+            })
+            .then(response => {
+                if (response.ok) return response.json();
+                throw new Error('Login failed');
+            })
+            .then(data => {
+                loginSuccess(data.username);
+                closeModal('login-modal');
+            })
+            .catch(error => {
+                alert(uiText[currentLanguage].loginError || uiText.english.loginError);
+                console.error('Login error:', error);
+            });
+            */
+        }
+    }
+    
+    function handleSignup(event) {
+        event.preventDefault();
+        const name = document.getElementById('signup-name').value;
+        const email = document.getElementById('signup-email').value;
+        const password = document.getElementById('signup-password').value;
+        
+        // Simulate signup - in a real app, this would call an API
+        if (name && email && password) {
+            // Mock successful signup
+            loginSuccess(name);
+            closeModal('signup-modal');
+            
+            // In a real app, you would make an API call like:
+            /*
+            fetch('/api/signup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name, email, password })
+            })
+            .then(response => {
+                if (response.ok) return response.json();
+                throw new Error('Signup failed');
+            })
+            .then(data => {
+                loginSuccess(data.username);
+                closeModal('signup-modal');
+            })
+            .catch(error => {
+                alert(uiText[currentLanguage].signupError || uiText.english.signupError);
+                console.error('Signup error:', error);
+            });
+            */
+        }
+    }
+    
+    function loginSuccess(username) {
+        isLoggedIn = true;
+        currentUser = username;
+        
+        // Update UI for logged in state
+        authSection.classList.add('hidden');
+        userProfile.classList.remove('hidden');
+        usernameDisplay.textContent = username;
+        
+        // Store login state in localStorage (for demo purposes)
+        localStorage.setItem('isLoggedIn', true);
+        localStorage.setItem('currentUser', username);
+    }
+    
+    function handleLogout() {
+        isLoggedIn = false;
+        currentUser = null;
+        
+        // Update UI for logged out state
+        userProfile.classList.add('hidden');
+        authSection.classList.remove('hidden');
+        
+        // Clear login state from localStorage
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('currentUser');
+        
+        // In a real app, you would make an API call:
+        /*
+        fetch('/api/logout', {
+            method: 'POST'
+        })
+        .then(() => {
+            // UI changes after successful logout
+        })
+        .catch(error => console.error('Logout error:', error));
+        */
+    }
+    
+    // Check if user was previously logged in
+    function checkLoginState() {
+        const storedLoginState = localStorage.getItem('isLoggedIn') === 'true';
+        const storedUser = localStorage.getItem('currentUser');
+        
+        if (storedLoginState && storedUser) {
+            loginSuccess(storedUser);
+        }
     }
 
-    // Helper function to handle fetch API errors
+    // Update temperature setting
+    function updateTemperature() {
+        const temperature = parseFloat(temperatureSlider.value);
+        temperatureValue.textContent = temperature;
+        
+        // Update the server-side setting
+        fetch('/api/set_temperature', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ temperature })
+        })
+        .catch(error => console.error('Error updating temperature setting:', error));
+    }
+
+    // Safe fetch with error handling
     async function safeFetch(url, options) {
         try {
             const response = await fetch(url, options);
             
-            // Try to parse the JSON response
-            let data;
-            try {
-                data = await response.json();
-            } catch (jsonError) {
-                console.error('Error parsing JSON response:', jsonError);
-                return { 
-                    ok: false, 
-                    status: response.status,
-                    error: 'Failed to parse server response' 
-                };
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorMessage;
+                
+                try {
+                    // Try to parse the error response as JSON
+                    const errorData = JSON.parse(errorText);
+                    errorMessage = errorData.error || 'An unknown error occurred';
+                } catch (e) {
+                    // If not JSON, use the text directly
+                    errorMessage = errorText || `Error: ${response.status} ${response.statusText}`;
+                }
+                
+                throw new Error(errorMessage);
             }
             
-            // Return combined response
-            return {
-                ok: response.ok,
-                status: response.status,
-                data: data,
-                error: !response.ok ? (data.error || `Error ${response.status}`) : null
-            };
-        } catch (fetchError) {
-            console.error('Network error:', fetchError);
-            return { 
-                ok: false, 
-                status: 0,
-                error: 'Network connection error. Please check your internet connection.'
-            };
+            return response.json();
+        } catch (error) {
+            console.error('Network error:', error.message);
+            throw error;
         }
     }
 
@@ -503,6 +780,17 @@ document.addEventListener('DOMContentLoaded', () => {
             ttsToggle.addEventListener('change', toggleTts);
         }
         
+        // Temperature slider
+        if (temperatureSlider) {
+            // Update display value when slider changes
+            temperatureSlider.addEventListener('input', () => {
+                temperatureValue.textContent = parseFloat(temperatureSlider.value).toFixed(1);
+            });
+            
+            // Send value to server when slider is released
+            temperatureSlider.addEventListener('change', updateTemperature);
+        }
+        
         // Add click handlers to existing read-aloud buttons
         document.querySelectorAll('.read-aloud-btn').forEach(button => {
             const parentMessage = button.closest('.assistant-message, .reflection-container');
@@ -512,6 +800,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 button.addEventListener('click', () => speakText(textToRead));
             }
         });
+        
+        // New UI event listeners
+        if (themeToggle) {
+            themeToggle.addEventListener('change', toggleTheme);
+        }
+        
+        // Tab navigation
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.getAttribute('data-tab');
+                switchTab(tabId);
+            });
+        });
+        
+        // Auth related listeners
+        if (loginBtn) loginBtn.addEventListener('click', () => openModal('login-modal'));
+        if (signupBtn) signupBtn.addEventListener('click', () => openModal('signup-modal'));
+        if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+        
+        // Modal close buttons
+        closeModalButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const modal = btn.closest('.modal');
+                if (modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        });
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', (event) => {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        });
+        
+        // Form submissions
+        if (loginForm) loginForm.addEventListener('submit', handleLogin);
+        if (signupForm) signupForm.addEventListener('submit', handleSignup);
     }
 
     // Initialize UI
@@ -522,9 +849,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Initial button states
         updateButtonStates();
+        checkLoginState();
         
         // Set up event listeners
         setupEventListeners();
+        
+        // Scroll chat to bottom on load
+        if (chatContainer) {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
     }
 
     // Initialize the UI
