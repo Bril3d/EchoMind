@@ -166,6 +166,17 @@ def store_in_astradb(
     print(f"Successfully stored {count} chunks in AstraDB")
 
 
+_cached_models = {}
+
+
+def get_sentence_transformer(model_name: str = EMBEDDING_MODEL):
+    """Get or initialize cached SentenceTransformer instance."""
+    global _cached_models
+    if model_name not in _cached_models:
+        _cached_models[model_name] = SentenceTransformer(model_name)
+    return _cached_models[model_name]
+
+
 def search_similar_text(
     db,
     query: str,
@@ -186,8 +197,8 @@ def search_similar_text(
     Returns:
         List of similar text chunks
     """
-    # Generate embedding for the query
-    model = SentenceTransformer(model_name)
+    # Generate embedding for the query using cached model
+    model = get_sentence_transformer(model_name)
     query_embedding = model.encode(query)
 
     # Get the collection

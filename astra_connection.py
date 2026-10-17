@@ -6,7 +6,10 @@ from astrapy import DataAPIClient
 load_dotenv()
 
 
-def connect_to_astradb():
+_cached_db = None
+
+
+def connect_to_astradb(force_reconnect: bool = False):
     """
     Connect to AstraDB using astrapy DataAPIClient.
 
@@ -17,6 +20,10 @@ def connect_to_astradb():
     Returns:
         db: AstraDB database client
     """
+    global _cached_db
+    if _cached_db is not None and not force_reconnect:
+        return _cached_db
+
     # Get credentials from environment variables
     token = os.environ.get("ASTRA_DB_APPLICATION_TOKEN")
     api_endpoint = os.environ.get("ASTRA_DB_API_ENDPOINT")
@@ -33,8 +40,7 @@ def connect_to_astradb():
         client = DataAPIClient()
         # Connect to the database by providing token during get_database call
         db = client.get_database(api_endpoint, token=token)
-
-        print(f"Connected to Astra DB: {db.list_collection_names()}")
+        _cached_db = db
         return db
 
     except Exception as e:

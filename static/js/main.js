@@ -12,233 +12,228 @@ document.addEventListener('DOMContentLoaded', () => {
     const sourcesContent = document.getElementById('sources-content');
     const sourcesToggleText = document.getElementById('sources-toggle-text');
     const sourcesChevron = document.getElementById('sources-chevron');
+    const sourcesCountBadge = document.getElementById('sources-count-badge');
     const ttsToggle = document.getElementById('tts-toggle');
-    const temperatureSlider = document.getElementById('temperature-slider');
-    let temperatureValue = document.getElementById('temperature-value');
-    
-    // New UI Elements
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    const tabPanes = document.querySelectorAll('.tab-pane');
-    const themeToggle = document.getElementById('theme-toggle');
-    const loginBtn = document.getElementById('login-btn');
-    const signupBtn = document.getElementById('signup-btn');
-    const logoutBtn = document.getElementById('logout-btn');
-    const loginModal = document.getElementById('login-modal');
-    const signupModal = document.getElementById('signup-modal');
-    const closeModalButtons = document.querySelectorAll('.close-modal');
-    const loginForm = document.getElementById('login-form');
-    const signupForm = document.getElementById('signup-form');
-    const authSection = document.getElementById('auth-section');
-    const userProfile = document.getElementById('user-profile');
-    const usernameDisplay = document.getElementById('username-display');
+    const micButton = document.getElementById('mic-button');
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    const reflectionHint = document.getElementById('reflection-hint');
 
-    // Text-to-speech related variables
+    // Theme Management
+    function initTheme() {
+        const savedTheme = localStorage.getItem('echomind_theme');
+        const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const currentTheme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', currentTheme);
+
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', () => {
+                const active = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', active);
+                localStorage.setItem('echomind_theme', active);
+                showToast(active === 'dark' ? '🌙 Twilight Dark Mode active' : '☀️ Serene Light Mode active');
+            });
+        }
+    }
+
+    // Voice recognition variables & state
+    let recognition = null;
+    let isListening = false;
     let currentSpeech = null;
-    let isTtsEnabled = localStorage.getItem('ttsEnabled') === 'true';
-    
-    // Authentication state
-    let isLoggedIn = false;
-    let currentUser = null;
-    
-    // Initialize TTS toggle based on saved preference
-    if (ttsToggle) {
-        ttsToggle.checked = isTtsEnabled;
-    }
-    
-    // Initialize theme based on saved preference
-    let isDarkMode = localStorage.getItem('darkMode') === 'true';
-    if (themeToggle) {
-        themeToggle.checked = isDarkMode;
-        setTheme(isDarkMode);
-    }
+    let activeSpeakingButton = null;
 
-    // Failsafe: Ensure spinner is hidden on page load
-    loadingSpinner.classList.add('hidden');
-    
-    // Failsafe: Add a backup timer to hide spinner after 10 seconds in case something goes wrong
-    function ensureSpinnerHidden() {
-        setTimeout(() => {
-            if (!loadingSpinner.classList.contains('hidden')) {
-                console.warn('Spinner failsafe triggered: hiding spinner after timeout');
-                loadingSpinner.classList.add('hidden');
-            }
-        }, 10000); // 10 seconds timeout
-    }
-
-    // UI text based on language
+    // Supported translations for UI
     const uiText = {
         english: {
-            thinking: "EchoMind is reflecting on your message...",
-            sources: "View sources EchoMind consulted",
-            hideSources: "Hide sources",
-            reflectionBtn: "✨ Generate Reflection",
+            thinking: "EchoMind is reflecting on your message with care...",
+            sources: "View therapeutic sources consulted",
+            hideSources: "Hide therapeutic sources",
+            reflectionBtn: "Generate Reflection",
+            reflectionHintReady: "Ready to reflect ✨",
+            reflectionHintNeed: "Needs 2+ exchanges",
             clearBtn: "Clear Conversation",
             send: "Send",
-            ttsEnabled: "Text-to-Speech Enabled",
-            ttsDisabled: "Text-to-Speech Disabled",
-            readAloud: "Read Aloud",
-            creativityLevel: "AI Creativity Level:",
-            focused: "Focused",
-            creative: "Creative",
-            // Auth related text
-            login: "Login",
-            signup: "Sign Up",
-            logout: "Logout",
-            welcomeBack: "Welcome back, ",
-            loginSuccess: "Login successful!",
-            signupSuccess: "Sign up successful!",
-            loginError: "Login failed. Please check your credentials.",
-            signupError: "Sign up failed. Please try again.",
-            // Tab names
-            chatTab: "Chat",
-            insightsTab: "Insights",
-            resourcesTab: "Resources"
+            readAloud: "Read aloud",
+            stopSpeaking: "Stop audio",
+            copied: "Copied to clipboard",
+            copy: "Copy",
+            startListening: "Start voice input",
+            stopListening: "Listening... (click to stop)",
+            voiceNotSupported: "Speech recognition is not supported in this browser.",
+            voicePermDenied: "Microphone permission was denied.",
+            clearConfirm: "Are you sure you want to clear this sanctuary session?",
+            errorGeneric: "An unexpected error occurred. Please try again."
         },
         arabic: {
-            thinking: "إيكو مايند يفكر في رسالتك...",
-            sources: "عرض المصادر التي استشارها إيكو مايند",
-            hideSources: "إخفاء المصادر",
-            reflectionBtn: "✨ إنشاء تفكير",
-            clearBtn: "مسح المحادثة",
+            thinking: "إيكو مايند يتأمل في رسالتك بعناية...",
+            sources: "عرض المصادر العلاجية المستشارة",
+            hideSources: "إخفاء المصادر العلاجية",
+            reflectionBtn: "إنشاء تأمل علاجي",
+            reflectionHintReady: "جاهز للتأمل ✨",
+            reflectionHintNeed: "يتطلب تبادلين على الأقل",
+            clearBtn: "مسح الجلسة",
             send: "إرسال",
-            ttsEnabled: "تم تمكين تحويل النص إلى كلام",
-            ttsDisabled: "تم تعطيل تحويل النص إلى كلام",
             readAloud: "قراءة بصوت عالٍ",
-            creativityLevel: "مستوى إبداع الذكاء الاصطناعي:",
-            focused: "مركّز",
-            creative: "إبداعي",
-            // Auth related text
-            login: "تسجيل الدخول",
-            signup: "إنشاء حساب",
-            logout: "تسجيل الخروج",
-            welcomeBack: "مرحبًا بعودتك، ",
-            loginSuccess: "تم تسجيل الدخول بنجاح!",
-            signupSuccess: "تم إنشاء الحساب بنجاح!",
-            loginError: "فشل تسجيل الدخول. يرجى التحقق من بيانات الاعتماد الخاصة بك.",
-            signupError: "فشل إنشاء الحساب. يرجى المحاولة مرة أخرى.",
-            // Tab names
-            chatTab: "دردشة",
-            insightsTab: "رؤى",
-            resourcesTab: "موارد"
+            stopSpeaking: "إيقاف الصوت",
+            copied: "تم النسخ إلى الحافظة",
+            copy: "نسخ",
+            startListening: "بدء الإدخال الصوتي",
+            stopListening: "جاري الاستماع... (انقر للإيقاف)",
+            voiceNotSupported: "التعرف الصوتي غير مدعوم في هذا المتصفح.",
+            voicePermDenied: "تم رفض إذن الميكروفون.",
+            clearConfirm: "هل أنت متأكد من رغبتك في مسح هذه الجلسة العلاجية؟",
+            errorGeneric: "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى."
         },
         french: {
-            thinking: "EchoMind réfléchit à votre message...",
-            sources: "Voir les sources consultées par EchoMind",
-            hideSources: "Masquer les sources",
-            reflectionBtn: "✨ Générer une réflexion",
-            clearBtn: "Effacer la conversation",
+            thinking: "EchoMind réfléchit à votre message avec bienveillance...",
+            sources: "Consulter les sources thérapeutiques",
+            hideSources: "Masquer les sources thérapeutiques",
+            reflectionBtn: "Générer une réflexion",
+            reflectionHintReady: "Prêt à réfléchir ✨",
+            reflectionHintNeed: "Nécessite 2+ échanges",
+            clearBtn: "Effacer la session",
             send: "Envoyer",
-            ttsEnabled: "Synthèse vocale activée",
-            ttsDisabled: "Synthèse vocale désactivée",
-            readAloud: "Lire à haute voix",
-            creativityLevel: "Niveau de créativité de l'IA:",
-            focused: "Concentré",
-            creative: "Créatif",
-            // Auth related text
-            login: "Connexion",
-            signup: "S'inscrire",
-            logout: "Déconnexion",
-            welcomeBack: "Bon retour, ",
-            loginSuccess: "Connexion réussie!",
-            signupSuccess: "Inscription réussie!",
-            loginError: "Échec de la connexion. Veuillez vérifier vos identifiants.",
-            signupError: "Échec de l'inscription. Veuillez réessayer.",
-            // Tab names
-            chatTab: "Discuter",
-            insightsTab: "Aperçus",
-            resourcesTab: "Ressources"
+            readAloud: "Lecture à voix haute",
+            stopSpeaking: "Arrêter l'audio",
+            copied: "Copié dans le presse-papiers",
+            copy: "Copier",
+            startListening: "Commencer la saisie vocale",
+            stopListening: "Écoute en cours... (cliquer pour arrêter)",
+            voiceNotSupported: "La reconnaissance vocale n'est pas prise en charge sur ce navigateur.",
+            voicePermDenied: "L'autorisation d'accès au micro a été refusée.",
+            clearConfirm: "Êtes-vous sûr de vouloir effacer cette conversation ?",
+            errorGeneric: "Une erreur est survenue. Veuillez réessayer."
         }
     };
 
-    // Current language
-    let currentLanguage = languageSelect.value;
+    let currentLanguage = (languageSelect ? languageSelect.value : 'english') || 'english';
+    let isTtsEnabled = localStorage.getItem('ttsEnabled') === 'true';
 
-    // Update UI text based on language
-    function updateUIText() {
-        const text = uiText[currentLanguage] || uiText.english;
-        thinkingText.textContent = text.thinking;
-        sourcesToggleText.textContent = text.sources;
-        reflectionButton.innerHTML = `<i class="fas fa-sparkles"></i> ${text.reflectionBtn}`;
-        clearButton.innerHTML = `<i class="fas fa-trash-alt"></i> ${text.clearBtn}`;
-        sendButton.innerHTML = `<i class="fas fa-paper-plane"></i> ${text.send}`;
-        
-        // Update all read-aloud button titles
-        document.querySelectorAll('.read-aloud-btn').forEach(btn => {
-            btn.title = text.readAloud;
-        });
-        
-        // Update temperature control labels
-        if (temperatureSlider && temperatureValue) {
-            const temperatureLabel = document.querySelector('.temperature-control label');
-            if (temperatureLabel) {
-                // Save the current display value
-                const currentValue = temperatureValue.textContent;
-                // Update the label
-                temperatureLabel.innerHTML = `${text.creativityLevel} <span id="temperature-value">${currentValue}</span>`;
-                // Re-assign the temperatureValue element since we recreated it
-                temperatureValue = document.getElementById('temperature-value');
-            }
-            
-            // Update min/max labels
-            const tempLabels = document.querySelectorAll('.temperature-labels span');
-            if (tempLabels && tempLabels.length === 2) {
-                tempLabels[0].textContent = text.focused;
-                tempLabels[1].textContent = text.creative;
-            }
-        }
-        
-        // Update auth buttons
-        if (loginBtn) loginBtn.textContent = text.login;
-        if (signupBtn) signupBtn.textContent = text.signup;
-        if (logoutBtn) logoutBtn.textContent = text.logout;
-        
-        // Update tab names
-        if (tabButtons && tabButtons.length >= 3) {
-            tabButtons[0].textContent = text.chatTab;
-            tabButtons[1].textContent = text.insightsTab;
-            tabButtons[2].textContent = text.resourcesTab;
+    if (ttsToggle) {
+        ttsToggle.checked = isTtsEnabled;
+    }
+
+    // Function to update recognition language (FIXES BUG where updateRecognitionLanguage was undefined)
+    function updateRecognitionLanguage() {
+        if (recognition) {
+            const langMap = {
+                english: 'en-US',
+                arabic: 'ar-SA',
+                french: 'fr-FR'
+            };
+            recognition.lang = langMap[currentLanguage] || 'en-US';
         }
     }
 
-    // Update placeholder text based on language
-    function updatePlaceholder() {
-        const placeholders = {
-            english: "Share what's on your mind...",
-            arabic: "شارك ما يدور في ذهنك...",
-            french: "Partagez ce qui vous préoccupe..."
+    // Initialize Speech Recognition
+    function initSpeechRecognition() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+            console.warn('Speech recognition not supported in this browser.');
+            if (micButton) {
+                micButton.title = uiText[currentLanguage]?.voiceNotSupported || uiText.english.voiceNotSupported;
+                micButton.style.opacity = '0.5';
+            }
+            return false;
+        }
+
+        const createNewRecognition = () => {
+            const instance = new SpeechRecognition();
+            instance.continuous = false;
+            instance.interimResults = true;
+
+            const langMap = {
+                english: 'en-US',
+                arabic: 'ar-SA',
+                french: 'fr-FR'
+            };
+            instance.lang = langMap[currentLanguage] || 'en-US';
+
+            instance.onresult = (event) => {
+                const transcript = Array.from(event.results)
+                    .map(result => result[0].transcript)
+                    .join('');
+
+                userInput.value = transcript;
+                autoResizeTextarea();
+            };
+
+            instance.onerror = (event) => {
+                console.warn('Speech recognition status:', event.error);
+                isListening = false;
+                if (micButton) micButton.classList.remove('listening');
+                if (event.error === 'not-allowed') {
+                    showToast(uiText[currentLanguage]?.voicePermDenied || uiText.english.voicePermDenied);
+                }
+            };
+
+            instance.onend = () => {
+                isListening = false;
+                if (micButton) {
+                    micButton.classList.remove('listening');
+                    micButton.title = uiText[currentLanguage]?.startListening || uiText.english.startListening;
+                }
+            };
+
+            return instance;
         };
-        userInput.placeholder = placeholders[currentLanguage] || placeholders.english;
-    }
 
-    // Toggle sources visibility
-    function toggleSources() {
-        const isHidden = sourcesContent.classList.contains('hidden');
-        if (isHidden) {
-            sourcesContent.classList.remove('hidden');
-            sourcesChevron.classList.remove('fa-chevron-down');
-            sourcesChevron.classList.add('fa-chevron-up');
-            sourcesToggleText.textContent = uiText[currentLanguage].hideSources || uiText.english.hideSources;
-        } else {
-            sourcesContent.classList.add('hidden');
-            sourcesChevron.classList.remove('fa-chevron-up');
-            sourcesChevron.classList.add('fa-chevron-down');
-            sourcesToggleText.textContent = uiText[currentLanguage].sources || uiText.english.sources;
+        if (micButton) {
+            micButton.addEventListener('click', () => {
+                if (isListening) {
+                    if (recognition) {
+                        try { recognition.stop(); } catch (e) { /* ignore */ }
+                    }
+                    isListening = false;
+                    micButton.classList.remove('listening');
+                } else {
+                    try {
+                        recognition = createNewRecognition();
+                        isListening = true;
+                        micButton.classList.add('listening');
+                        micButton.title = uiText[currentLanguage]?.stopListening || uiText.english.stopListening;
+                        recognition.start();
+                    } catch (err) {
+                        console.error('Failed to start speech recognition:', err);
+                        isListening = false;
+                        micButton.classList.remove('listening');
+                    }
+                }
+            });
         }
+
+        return true;
     }
 
-    // Text-to-speech function
-    function speakText(text) {
-        if (!isTtsEnabled) return;
-        
-        // Stop any currently speaking synthesis
-        if (currentSpeech) {
+    // Auto resize textarea
+    function autoResizeTextarea() {
+        if (!userInput) return;
+        userInput.style.height = 'auto';
+        userInput.style.height = `${Math.min(userInput.scrollHeight, 140)}px`;
+    }
+
+    // Text-to-Speech function
+    function speakText(text, triggerButton = null) {
+        if (!window.speechSynthesis) return;
+
+        // If clicking the currently speaking button, stop speech
+        if (currentSpeech && activeSpeakingButton === triggerButton) {
             window.speechSynthesis.cancel();
+            if (activeSpeakingButton) activeSpeakingButton.classList.remove('speaking');
+            currentSpeech = null;
+            activeSpeakingButton = null;
+            return;
         }
-        
-        // Create a new utterance
-        const utterance = new SpeechSynthesisUtterance(text);
-        
-        // Set language based on current interface language
+
+        // Stop any ongoing speech
+        window.speechSynthesis.cancel();
+        if (activeSpeakingButton) activeSpeakingButton.classList.remove('speaking');
+
+        const cleanText = text.replace(/[*#_~`]/g, '').trim();
+        if (!cleanText) return;
+
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+
         switch (currentLanguage) {
             case 'arabic':
                 utterance.lang = 'ar';
@@ -249,617 +244,482 @@ document.addEventListener('DOMContentLoaded', () => {
             default:
                 utterance.lang = 'en-US';
         }
-        
-        // Start speaking
-        window.speechSynthesis.speak(utterance);
-        currentSpeech = utterance;
-        
-        // Handle when speech has finished
-        utterance.onend = () => {
-            currentSpeech = null;
+
+        utterance.rate = 0.95; // Gentle therapeutic cadence
+
+        utterance.onstart = () => {
+            currentSpeech = utterance;
+            if (triggerButton) {
+                activeSpeakingButton = triggerButton;
+                triggerButton.classList.add('speaking');
+            }
         };
+
+        utterance.onend = () => {
+            if (activeSpeakingButton) activeSpeakingButton.classList.remove('speaking');
+            currentSpeech = null;
+            activeSpeakingButton = null;
+        };
+
+        utterance.onerror = () => {
+            if (activeSpeakingButton) activeSpeakingButton.classList.remove('speaking');
+            currentSpeech = null;
+            activeSpeakingButton = null;
+        };
+
+        window.speechSynthesis.speak(utterance);
     }
-    
-    // Toggle text-to-speech functionality
+
+    // Toggle TTS
     function toggleTts() {
         isTtsEnabled = ttsToggle.checked;
         localStorage.setItem('ttsEnabled', isTtsEnabled);
-        
+
         if (!isTtsEnabled && currentSpeech) {
             window.speechSynthesis.cancel();
+            if (activeSpeakingButton) activeSpeakingButton.classList.remove('speaking');
             currentSpeech = null;
+            activeSpeakingButton = null;
         }
-        
-        // Also update server-side setting
+
         fetch('/api/set_tts', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ enabled: isTtsEnabled })
-        })
-        .catch(error => console.error('Error updating TTS setting:', error));
+        }).catch(err => console.error('Error saving TTS preference:', err));
+
+        showToast(isTtsEnabled ? '🔊 Voice Narration turned ON' : '🔇 Voice Narration turned OFF');
     }
-    
-    // Toggle theme (dark/light mode)
-    function toggleTheme() {
-        const isDark = themeToggle.checked;
-        setTheme(isDark);
-        localStorage.setItem('darkMode', isDark);
-    }
-    
-    // Set theme based on preference
-    function setTheme(isDark) {
-        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-    }
-    
-    // Handle tab switching
-    function switchTab(tabId) {
-        // Hide all tab panes
-        tabPanes.forEach(pane => {
-            pane.classList.remove('active');
-        });
-        
-        // Deactivate all tab buttons
-        tabButtons.forEach(btn => {
-            btn.classList.remove('active');
-        });
-        
-        // Activate the selected tab and its content
-        document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
-        document.getElementById(`${tabId}-tab`).classList.add('active');
-    }
-    
-    // Authentication Functions
-    function openModal(modalId) {
-        document.getElementById(modalId).style.display = 'block';
-    }
-    
-    function closeModal(modalId) {
-        document.getElementById(modalId).style.display = 'none';
-    }
-    
-    function handleLogin(event) {
-        event.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-        
-        // Simulate login - in a real app, this would call an API
-        if (email && password) {
-            // Mock successful login
-            const username = email.split('@')[0];
-            loginSuccess(username);
-            closeModal('login-modal');
-            
-            // In a real app, you would make an API call like:
-            /*
-            fetch('/api/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ email, password })
-            })
-            .then(response => {
-                if (response.ok) return response.json();
-                throw new Error('Login failed');
-            })
-            .then(data => {
-                loginSuccess(data.username);
-                closeModal('login-modal');
-            })
-            .catch(error => {
-                alert(uiText[currentLanguage].loginError || uiText.english.loginError);
-                console.error('Login error:', error);
-            });
-            */
-        }
-    }
-    
-    function handleSignup(event) {
-        event.preventDefault();
-        const name = document.getElementById('signup-name').value;
-        const email = document.getElementById('signup-email').value;
-        const password = document.getElementById('signup-password').value;
-        
-        // Simulate signup - in a real app, this would call an API
-        if (name && email && password) {
-            // Mock successful signup
-            loginSuccess(name);
-            closeModal('signup-modal');
-            
-            // In a real app, you would make an API call like:
-            /*
-            fetch('/api/signup', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ name, email, password })
-            })
-            .then(response => {
-                if (response.ok) return response.json();
-                throw new Error('Signup failed');
-            })
-            .then(data => {
-                loginSuccess(data.username);
-                closeModal('signup-modal');
-            })
-            .catch(error => {
-                alert(uiText[currentLanguage].signupError || uiText.english.signupError);
-                console.error('Signup error:', error);
-            });
-            */
-        }
-    }
-    
-    function loginSuccess(username) {
-        isLoggedIn = true;
-        currentUser = username;
-        
-        // Update UI for logged in state
-        authSection.classList.add('hidden');
-        userProfile.classList.remove('hidden');
-        usernameDisplay.textContent = username;
-        
-        // Store login state in localStorage (for demo purposes)
-        localStorage.setItem('isLoggedIn', true);
-        localStorage.setItem('currentUser', username);
-    }
-    
-    function handleLogout() {
-        isLoggedIn = false;
-        currentUser = null;
-        
-        // Update UI for logged out state
-        userProfile.classList.add('hidden');
-        authSection.classList.remove('hidden');
-        
-        // Clear login state from localStorage
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem('currentUser');
-        
-        // In a real app, you would make an API call:
-        /*
-        fetch('/api/logout', {
-            method: 'POST'
-        })
-        .then(() => {
-            // UI changes after successful logout
-        })
-        .catch(error => console.error('Logout error:', error));
-        */
-    }
-    
-    // Check if user was previously logged in
-    function checkLoginState() {
-        const storedLoginState = localStorage.getItem('isLoggedIn') === 'true';
-        const storedUser = localStorage.getItem('currentUser');
-        
-        if (storedLoginState && storedUser) {
-            loginSuccess(storedUser);
+
+    // Copy to clipboard helper
+    async function copyToClipboard(text, btn) {
+        try {
+            await navigator.clipboard.writeText(text);
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check" style="color: #10b981;"></i> <span class="btn-micro-text">Copied!</span>';
+            showToast(uiText[currentLanguage]?.copied || uiText.english.copied);
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+            }, 2000);
+        } catch (err) {
+            console.error('Clipboard copy failed:', err);
         }
     }
 
-    // Update temperature setting
-    function updateTemperature() {
-        const temperature = parseFloat(temperatureSlider.value);
-        temperatureValue.textContent = temperature;
-        
-        // Update the server-side setting
-        fetch('/api/set_temperature', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ temperature })
-        })
-        .catch(error => console.error('Error updating temperature setting:', error));
+    // Toggle Sources Accordion
+    function toggleSources() {
+        if (!sourcesContent) return;
+        const isHidden = sourcesContent.classList.contains('hidden');
+        if (isHidden) {
+            sourcesContent.classList.remove('hidden');
+            if (sourcesChevron) sourcesChevron.style.transform = 'rotate(180deg)';
+            if (sourcesToggleText) {
+                sourcesToggleText.textContent = uiText[currentLanguage]?.hideSources || uiText.english.hideSources;
+            }
+        } else {
+            sourcesContent.classList.add('hidden');
+            if (sourcesChevron) sourcesChevron.style.transform = 'rotate(0deg)';
+            if (sourcesToggleText) {
+                sourcesToggleText.textContent = uiText[currentLanguage]?.sources || uiText.english.sources;
+            }
+        }
     }
 
-    // Safe fetch with error handling
+    // Safe Fetch wrapper
     async function safeFetch(url, options) {
         try {
             const response = await fetch(url, options);
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                let errorMessage;
-                
-                try {
-                    // Try to parse the error response as JSON
-                    const errorData = JSON.parse(errorText);
-                    errorMessage = errorData.error || 'An unknown error occurred';
-                } catch (e) {
-                    // If not JSON, use the text directly
-                    errorMessage = errorText || `Error: ${response.status} ${response.statusText}`;
-                }
-                
-                throw new Error(errorMessage);
+            let data = null;
+            try {
+                data = await response.json();
+            } catch (jsonErr) {
+                return { ok: false, status: response.status, error: 'Invalid response format' };
             }
-            
-            return response.json();
-        } catch (error) {
-            console.error('Network error:', error.message);
-            throw error;
+            return {
+                ok: response.ok,
+                status: response.status,
+                data: data,
+                error: !response.ok ? (data.error || `Server returned error ${response.status}`) : null
+            };
+        } catch (netErr) {
+            return {
+                ok: false,
+                status: 0,
+                error: 'Network connection issue. Please check your network and server.'
+            };
         }
     }
 
-    // Send message to server
+    // Send Message
     async function sendMessage() {
         const message = userInput.value.trim();
         if (!message) return;
 
-        // Clear input
+        // Reset textarea height
         userInput.value = '';
+        autoResizeTextarea();
 
-        // Show loading spinner
-        loadingSpinner.classList.remove('hidden');
-        ensureSpinnerHidden(); // Start failsafe timer
+        // Remove welcome card if visible
+        const welcomeCard = document.getElementById('welcome-card');
+        if (welcomeCard) welcomeCard.remove();
 
-        // Add user message to UI immediately
+        // Add user message
         addMessage('user', message);
 
+        // Show thinking indicator
+        if (loadingSpinner) loadingSpinner.classList.remove('hidden');
+        scrollChatToBottom();
+
         try {
-            // Send message to server using safeFetch
             const result = await safeFetch('/api/send_message', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message })
             });
 
-            if (result.ok) {
-                // Add assistant response to chat
+            if (result.ok && result.data) {
                 addMessage('assistant', result.data.response);
 
-                // Update sources if available
                 if (result.data.sources && result.data.sources.length > 0) {
                     updateSources(result.data.sources);
-                    sourcesContainer.classList.remove('hidden');
+                    if (sourcesContainer) sourcesContainer.classList.remove('hidden');
                 } else {
-                    sourcesContainer.classList.add('hidden');
+                    if (sourcesContainer) sourcesContainer.classList.add('hidden');
                 }
 
-                // Update button states
                 updateButtonStates();
             } else {
-                throw new Error(result.error || 'Failed to get response');
+                throw new Error(result.error || 'Failed to receive a therapeutic response');
             }
-        } catch (error) {
-            console.error('Error sending message:', error);
-            // Add error message to chat so user knows something went wrong
-            addMessage('assistant', 'Sorry, I encountered an error processing your message. Please try again.');
+        } catch (err) {
+            console.error('Error sending message:', err);
+            addMessage('assistant', `I apologize, but I encountered an issue: ${err.message || 'Please try again in a moment.'}`);
         } finally {
-            // Always hide loading spinner, even if there was an error
-            loadingSpinner.classList.add('hidden');
+            if (loadingSpinner) loadingSpinner.classList.add('hidden');
+            scrollChatToBottom();
         }
     }
 
-    // Add message to chat UI
+    // Add Message to DOM
     function addMessage(role, content) {
         const messageDiv = document.createElement('div');
         messageDiv.className = role === 'user' ? 'user-message' : 'assistant-message';
-        
+
         if (role === 'user') {
-            messageDiv.textContent = content;
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.textContent = content;
+            messageDiv.appendChild(bubble);
         } else {
-            // For assistant messages, add message content and read-aloud button
-            const messageContent = document.createElement('div');
-            messageContent.className = 'message-content';
-            messageContent.textContent = content;
-            
-            const readButton = document.createElement('button');
-            readButton.className = 'read-aloud-btn';
-            readButton.title = uiText[currentLanguage].readAloud || uiText.english.readAloud;
-            readButton.innerHTML = '<i class="fas fa-volume-up"></i>';
-            readButton.addEventListener('click', () => speakText(content));
-            
-            messageDiv.appendChild(messageContent);
-            messageDiv.appendChild(readButton);
-            
-            // Auto-read if TTS is enabled
+            // Assistant Avatar
+            const avatar = document.createElement('div');
+            avatar.className = 'assistant-avatar';
+            avatar.innerHTML = `<img src="/static/images/logo.svg" alt="EchoMind" onerror="this.src='/static/images/logo.png'">`;
+
+            // Bubble Wrap
+            const bubbleWrap = document.createElement('div');
+            bubbleWrap.className = 'assistant-bubble-wrap';
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = content;
+
+            // Meta controls (Read aloud + Copy)
+            const metaDiv = document.createElement('div');
+            metaDiv.className = 'message-meta';
+
+            const listenBtn = document.createElement('button');
+            listenBtn.className = 'action-micro-btn read-aloud-btn';
+            listenBtn.title = uiText[currentLanguage]?.readAloud || uiText.english.readAloud;
+            listenBtn.innerHTML = '<i class="fas fa-volume-up"></i> <span class="btn-micro-text">Listen</span>';
+            listenBtn.addEventListener('click', () => speakText(content, listenBtn));
+
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'action-micro-btn copy-msg-btn';
+            copyBtn.title = uiText[currentLanguage]?.copy || uiText.english.copy;
+            copyBtn.innerHTML = '<i class="fas fa-copy"></i> <span class="btn-micro-text">Copy</span>';
+            copyBtn.addEventListener('click', () => copyToClipboard(content, copyBtn));
+
+            metaDiv.appendChild(listenBtn);
+            metaDiv.appendChild(copyBtn);
+
+            bubbleWrap.appendChild(contentDiv);
+            bubbleWrap.appendChild(metaDiv);
+
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(bubbleWrap);
+
+            // Auto-narration if TTS enabled
             if (isTtsEnabled) {
-                setTimeout(() => speakText(content), 500);
+                setTimeout(() => speakText(content, listenBtn), 400);
             }
         }
-        
+
         chatContainer.appendChild(messageDiv);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+        scrollChatToBottom();
     }
 
-    // Update sources in the UI
+    // Update Sources
     function updateSources(sources) {
+        if (!sourcesContent) return;
         sourcesContent.innerHTML = '';
-        sources.forEach(source => {
-            const sourceItem = document.createElement('div');
-            sourceItem.className = 'source-item';
-            sourceItem.textContent = `• ${source}`;
-            sourcesContent.appendChild(sourceItem);
+
+        if (sourcesCountBadge) {
+            sourcesCountBadge.textContent = `${sources.length} Consulted`;
+        }
+
+        sources.forEach(src => {
+            const item = document.createElement('div');
+            item.className = 'source-item';
+            item.textContent = src;
+            sourcesContent.appendChild(item);
         });
     }
 
-    // Generate reflection
+    // Generate Reflection
     async function generateReflection() {
-        loadingSpinner.classList.remove('hidden');
-        ensureSpinnerHidden(); // Start failsafe timer
+        if (loadingSpinner) loadingSpinner.classList.remove('hidden');
+        scrollChatToBottom();
 
         try {
-            // Send request using safeFetch
             const result = await safeFetch('/api/generate_reflection', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                headers: { 'Content-Type': 'application/json' }
             });
 
-            if (result.ok) {
-                // Remove existing reflection if any
-                const existingReflection = document.querySelector('.reflection-container');
-                if (existingReflection) {
-                    existingReflection.remove();
-                }
+            if (result.ok && result.data) {
+                const existing = document.querySelector('.reflection-container');
+                if (existing) existing.remove();
 
-                // Add new reflection
-                const reflectionDiv = document.createElement('div');
-                reflectionDiv.className = 'reflection-container';
-                
-                const contentSpan = document.createElement('span');
-                contentSpan.innerHTML = `<span class="reflection-icon">✨</span> <strong>Reflection:</strong> ${result.data.reflection}`;
-                
-                const readButton = document.createElement('button');
-                readButton.className = 'read-aloud-btn';
-                readButton.title = uiText[currentLanguage].readAloud || uiText.english.readAloud;
-                readButton.innerHTML = '<i class="fas fa-volume-up"></i>';
-                readButton.addEventListener('click', () => speakText(result.data.reflection));
-                
-                reflectionDiv.appendChild(contentSpan);
-                reflectionDiv.appendChild(readButton);
-                chatContainer.appendChild(reflectionDiv);
-                
-                // Auto-read if TTS is enabled
+                const refDiv = document.createElement('div');
+                refDiv.className = 'reflection-container';
+
+                const header = document.createElement('div');
+                header.className = 'reflection-header';
+                header.innerHTML = '<span class="reflection-icon">✨</span> <span class="reflection-title">Mindful Reflection & Growth</span>';
+
+                const textDiv = document.createElement('div');
+                textDiv.className = 'reflection-text';
+                textDiv.textContent = result.data.reflection;
+
+                const actions = document.createElement('div');
+                actions.className = 'reflection-actions';
+
+                const listenBtn = document.createElement('button');
+                listenBtn.className = 'action-micro-btn read-aloud-btn';
+                listenBtn.innerHTML = '<i class="fas fa-volume-up"></i> <span class="btn-micro-text">Listen</span>';
+                listenBtn.addEventListener('click', () => speakText(result.data.reflection, listenBtn));
+
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'action-micro-btn copy-msg-btn';
+                copyBtn.innerHTML = '<i class="fas fa-copy"></i> <span class="btn-micro-text">Copy</span>';
+                copyBtn.addEventListener('click', () => copyToClipboard(result.data.reflection, copyBtn));
+
+                actions.appendChild(listenBtn);
+                actions.appendChild(copyBtn);
+
+                refDiv.appendChild(header);
+                refDiv.appendChild(textDiv);
+                refDiv.appendChild(actions);
+
+                chatContainer.appendChild(refDiv);
+                scrollChatToBottom();
+
                 if (isTtsEnabled) {
-                    setTimeout(() => speakText(result.data.reflection), 500);
+                    setTimeout(() => speakText(result.data.reflection, listenBtn), 400);
                 }
-                
-                chatContainer.scrollTop = chatContainer.scrollHeight;
             } else {
                 throw new Error(result.error || 'Failed to generate reflection');
             }
-        } catch (error) {
-            console.error('Error generating reflection:', error);
-            // Add error message to chat
-            addMessage('assistant', 'Sorry, I encountered an error generating a reflection. Please try again.');
+        } catch (err) {
+            console.error('Error in reflection:', err);
+            showToast(err.message || 'Could not generate reflection yet.');
         } finally {
-            // Always hide loading spinner
-            loadingSpinner.classList.add('hidden');
+            if (loadingSpinner) loadingSpinner.classList.add('hidden');
         }
     }
 
-    // Clear conversation
+    // Clear Conversation
     async function clearConversation() {
-        if (!confirm('Are you sure you want to clear the entire conversation?')) return;
+        const confirmMsg = uiText[currentLanguage]?.clearConfirm || uiText.english.clearConfirm;
+        if (!confirm(confirmMsg)) return;
 
-        loadingSpinner.classList.remove('hidden');
-        ensureSpinnerHidden(); // Start failsafe timer
+        if (loadingSpinner) loadingSpinner.classList.remove('hidden');
 
         try {
-            // Use safeFetch for the request
-            const result = await safeFetch('/api/clear_conversation', {
-                method: 'POST'
-            });
-
+            const result = await safeFetch('/api/clear_conversation', { method: 'POST' });
             if (result.ok) {
-                // Get welcome message based on current language
-                let welcomeMessage;
-                switch (currentLanguage) {
-                    case 'arabic':
-                        welcomeMessage = `
-                            <h3>مرحبًا بك في إيكو مايند</h3>
-                            <p>أنا هنا للاستماع والدعم وتقديم التوجيه بناءً على المبادئ العلاجية.
-                            شارك أفكارك أو مخاوفك أو مشاعرك، وسأرد بتعاطف وتفهم.</p>
-                            <p>كيف تشعر اليوم؟</p>
-                        `;
-                        break;
-                    case 'french':
-                        welcomeMessage = `
-                            <h3>Bienvenue à EchoMind</h3>
-                            <p>Je suis là pour écouter, soutenir et offrir des conseils basés sur des principes thérapeutiques.
-                            Partagez vos pensées, préoccupations ou sentiments, et je répondrai avec empathie et compréhension.</p>
-                            <p>Comment vous sentez-vous aujourd'hui ?</p>
-                        `;
-                        break;
-                    default: // english
-                        welcomeMessage = `
-                            <h3>Welcome to EchoMind</h3>
-                            <p>I'm here to listen, support, and offer guidance based on therapeutic principles. 
-                            Share your thoughts, concerns, or feelings, and I'll respond with empathy and understanding.</p>
-                            <p>How are you feeling today?</p>
-                        `;
-                }
-                
-                // Clear chat UI
-                chatContainer.innerHTML = `
-                    <div class="intro-card">
-                        ${welcomeMessage}
-                    </div>
-                `;
-
-                // Hide sources
-                sourcesContainer.classList.add('hidden');
-
-                // Update button states
-                reflectionButton.disabled = true;
-                clearButton.disabled = true;
+                window.location.reload();
             } else {
-                throw new Error(result.error || 'Failed to clear conversation');
+                throw new Error(result.error || 'Clear failed');
             }
-        } catch (error) {
-            console.error('Error clearing conversation:', error);
-            // Show error in chat instead of alert
-            addMessage('assistant', 'Sorry, I encountered an error clearing the conversation. Please try again.');
+        } catch (err) {
+            console.error('Clear conversation error:', err);
+            showToast('Failed to clear conversation.');
         } finally {
-            // Always hide loading spinner
-            loadingSpinner.classList.add('hidden');
+            if (loadingSpinner) loadingSpinner.classList.add('hidden');
         }
     }
 
-    // Change language
+    // Change Language (Fixed Bug: No unhandled exceptions)
     async function changeLanguage() {
         const newLanguage = languageSelect.value;
-        
-        // Show loading spinner
-        loadingSpinner.classList.remove('hidden');
-        ensureSpinnerHidden(); // Start failsafe timer
-        
+        if (loadingSpinner) loadingSpinner.classList.remove('hidden');
+
         try {
-            // Use safeFetch for the request
             const result = await safeFetch('/api/set_language', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ language: newLanguage })
             });
 
             if (result.ok) {
                 currentLanguage = newLanguage;
-                updateUIText();
-                updatePlaceholder();
-                // Reload to refresh all UI elements
+                updateRecognitionLanguage();
                 window.location.reload();
             } else {
-                // Hide spinner if there's an error and we don't reload
-                loadingSpinner.classList.add('hidden');
-                throw new Error(result.error || 'Failed to change language');
+                throw new Error(result.error || 'Failed to update language');
             }
-        } catch (error) {
-            console.error('Error changing language:', error);
-            // Hide spinner in case of error and reload doesn't happen
-            loadingSpinner.classList.add('hidden');
-            // Show error message in chat
-            addMessage('assistant', 'Sorry, I encountered an error changing the language. Please try again.');
+        } catch (err) {
+            console.error('Error changing language:', err);
+            if (loadingSpinner) loadingSpinner.classList.add('hidden');
+            showToast('Error changing language.');
         }
     }
 
-    // Update button states based on message count
+    // Update Button States
     function updateButtonStates() {
         const messageCount = document.querySelectorAll('.user-message, .assistant-message').length;
-        reflectionButton.disabled = messageCount < 4;
-        clearButton.disabled = messageCount < 1;
+        const canReflect = messageCount >= 4;
+        const canClear = messageCount > 0;
+
+        if (reflectionButton) {
+            reflectionButton.disabled = !canReflect;
+        }
+
+        if (clearButton) {
+            clearButton.disabled = !canClear;
+        }
+
+        if (reflectionHint) {
+            if (canReflect) {
+                reflectionHint.textContent = uiText[currentLanguage]?.reflectionHintReady || uiText.english.reflectionHintReady;
+                reflectionHint.style.color = 'var(--primary-color)';
+                reflectionHint.style.fontWeight = '600';
+            } else {
+                reflectionHint.textContent = uiText[currentLanguage]?.reflectionHintNeed || uiText.english.reflectionHintNeed;
+                reflectionHint.style.color = 'var(--text-muted)';
+                reflectionHint.style.fontWeight = '400';
+            }
+        }
     }
 
-    // Set up event listeners
+    // Scroll chat smoothly to bottom
+    function scrollChatToBottom() {
+        if (chatContainer) {
+            chatContainer.scrollTo({
+                top: chatContainer.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    }
+
+    // Setup Event Listeners
     function setupEventListeners() {
-        // Send message on button click
-        sendButton.addEventListener('click', sendMessage);
+        // Send button
+        if (sendButton) sendButton.addEventListener('click', sendMessage);
 
-        // Send message on Enter key (Shift+Enter for new line)
-        userInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-
-        // Language change
-        languageSelect.addEventListener('change', changeLanguage);
-
-        // Generate reflection
-        reflectionButton.addEventListener('click', generateReflection);
-
-        // Clear conversation
-        clearButton.addEventListener('click', clearConversation);
-
-        // Sources toggle
-        document.querySelector('.sources-header').addEventListener('click', toggleSources);
-        
-        // TTS toggle
-        if (ttsToggle) {
-            ttsToggle.addEventListener('change', toggleTts);
-        }
-        
-        // Temperature slider
-        if (temperatureSlider) {
-            // Update display value when slider changes
-            temperatureSlider.addEventListener('input', () => {
-                temperatureValue.textContent = parseFloat(temperatureSlider.value).toFixed(1);
+        // Enter key to send, Shift+Enter for newline
+        if (userInput) {
+            userInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
             });
-            
-            // Send value to server when slider is released
-            temperatureSlider.addEventListener('change', updateTemperature);
+            userInput.addEventListener('input', autoResizeTextarea);
         }
-        
-        // Add click handlers to existing read-aloud buttons
-        document.querySelectorAll('.read-aloud-btn').forEach(button => {
-            const parentMessage = button.closest('.assistant-message, .reflection-container');
-            if (parentMessage) {
-                const contentElement = parentMessage.querySelector('.message-content') || parentMessage;
-                const textToRead = contentElement.textContent.replace('Reflection:', '').trim();
-                button.addEventListener('click', () => speakText(textToRead));
-            }
-        });
-        
-        // New UI event listeners
-        if (themeToggle) {
-            themeToggle.addEventListener('change', toggleTheme);
-        }
-        
-        // Tab navigation
-        tabButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tabId = btn.getAttribute('data-tab');
-                switchTab(tabId);
-            });
-        });
-        
-        // Auth related listeners
-        if (loginBtn) loginBtn.addEventListener('click', () => openModal('login-modal'));
-        if (signupBtn) signupBtn.addEventListener('click', () => openModal('signup-modal'));
-        if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
-        
-        // Modal close buttons
-        closeModalButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const modal = btn.closest('.modal');
-                if (modal) {
-                    modal.style.display = 'none';
+
+        // Language select
+        if (languageSelect) languageSelect.addEventListener('change', changeLanguage);
+
+        // Reflection button
+        if (reflectionButton) reflectionButton.addEventListener('click', generateReflection);
+
+        // Clear button
+        if (clearButton) clearButton.addEventListener('click', clearConversation);
+
+        // TTS Toggle
+        if (ttsToggle) ttsToggle.addEventListener('change', toggleTts);
+
+        // Sources Header Click
+        const sourcesHeader = document.querySelector('.sources-header');
+        if (sourcesHeader) sourcesHeader.addEventListener('click', toggleSources);
+
+        // Quick prompt chips
+        document.querySelectorAll('.prompt-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const prompt = chip.getAttribute('data-prompt');
+                if (prompt && userInput) {
+                    userInput.value = prompt;
+                    autoResizeTextarea();
+                    sendMessage();
                 }
             });
         });
-        
-        // Close modal when clicking outside
-        window.addEventListener('click', (event) => {
-            if (event.target.classList.contains('modal')) {
-                event.target.style.display = 'none';
+
+        // Existing read aloud buttons on page load
+        document.querySelectorAll('.read-aloud-btn').forEach(btn => {
+            const parent = btn.closest('.assistant-bubble-wrap, .reflection-container');
+            if (parent) {
+                const textElem = parent.querySelector('.message-content, .reflection-text');
+                if (textElem) {
+                    btn.addEventListener('click', () => speakText(textElem.textContent, btn));
+                }
             }
         });
-        
-        // Form submissions
-        if (loginForm) loginForm.addEventListener('submit', handleLogin);
-        if (signupForm) signupForm.addEventListener('submit', handleSignup);
+
+        // Existing copy buttons on page load
+        document.querySelectorAll('.copy-msg-btn').forEach(btn => {
+            const parent = btn.closest('.assistant-bubble-wrap, .reflection-container');
+            if (parent) {
+                const textElem = parent.querySelector('.message-content, .reflection-text');
+                if (textElem) {
+                    btn.addEventListener('click', () => copyToClipboard(textElem.textContent, btn));
+                }
+            }
+        });
     }
 
-    // Initialize UI
-    function initializeUI() {
-        // Update UI text based on current language
-        updateUIText();
-        updatePlaceholder();
-        
-        // Initial button states
-        updateButtonStates();
-        checkLoginState();
-        
-        // Set up event listeners
+    // Toast Notification Utility
+    function showToast(message, duration = 2800) {
+        const existing = document.getElementById('toast-notification');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.id = 'toast-notification';
+        toast.className = 'toast';
+        toast.textContent = message;
+
+        document.body.appendChild(toast);
+
+        setTimeout(() => toast.classList.add('show'), 20);
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 350);
+        }, duration);
+    }
+
+    // Initialization
+    function initialize() {
+        initTheme();
+        initSpeechRecognition();
         setupEventListeners();
-        
-        // Scroll chat to bottom on load
-        if (chatContainer) {
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
+        updateButtonStates();
+        autoResizeTextarea();
+        scrollChatToBottom();
     }
 
-    // Initialize the UI
-    initializeUI();
-}); 
+    initialize();
+});

@@ -1,213 +1,128 @@
-# AstraDB Python Connection
+# EchoMind — Compassionate AI Therapeutic Assistant
 
-This repository contains code to connect to DataStax AstraDB using the astrapy package and environment variables, as well as tools for processing text files and storing them as vector embeddings.
+<p align="center">
+  <img src="static/images/logo.svg" alt="EchoMind Brand Logo" width="120" height="120" />
+</p>
 
-## Prerequisites
+<p align="center">
+  <em>A tranquil, empathetic AI sanctuary designed to support mental wellness, mindful grounding, and personal growth.</em>
+</p>
 
-- Python 3.6 or higher
-- An AstraDB account and database
-- Secure Connect Bundle ZIP file for your database
-- Database credentials (Client ID and Client Secret)
-- Google API key for Gemini (for therapeutic assistant feature)
+---
 
-## Installation
+## 🌟 Application Showcase
 
-1. Clone this repository
-2. Install required dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
+<p align="center">
+  <img src="static/images/Echomind/Echomind.png" alt="EchoMind Sanctuary Landing View" width="100%" />
+  <em>Figure 1: Serene Sanctuary landing page with quick starter prompt chips, multilingual support, and voice settings.</em>
+</p>
 
-## Environment Variables
+<br/>
 
-Create a `.env` file in the root directory with the following variables:
+<p align="center">
+  <img src="static/images/Echomind/Echomind-2.png" alt="Empathetic Dialogue with Clinical Citations" width="100%" />
+  <em>Figure 2: Empathetic therapeutic dialogue with collapsible AstraDB vector source citations.</em>
+</p>
+
+<br/>
+
+<p align="center">
+  <img src="static/images/Echomind/Echomind-3.jpg" alt="Mindful Reflection & Growth" width="100%" />
+  <em>Figure 3: Mindful Reflection & Growth card synthesizing conversational history into positive takeaways.</em>
+</p>
+
+---
+
+## ✨ Key Features
+
+- **Therapeutic Dialogue:** Empathetic, compassionate AI companion guided by evidence-based cognitive and therapeutic frameworks.
+- **RAG Knowledge Retrieval:** Real-time semantic vector retrieval using **DataStax AstraDB** and **SentenceTransformers** (`all-MiniLM-L6-v2`) to provide grounded insights from CBT and therapeutic dialogues.
+- **Mindful Reflections:** Generates holistic, uplifting reflections highlighting resilience, recurring emotional themes, and self-compassion takeaways after conversational exchanges.
+- **Modern Wellness UI:** Designed with an anti-slop, calm aesthetic featuring **Serene Light** and **Twilight Dark** modes, auto-expanding text inputs, and smooth transitions.
+- **Multilingual Support:** Native experience in **English**, **Arabic (العربية)** with RTL alignment, and **French (Français)**.
+- **Voice & Accessibility:** In-browser Speech-to-Text input with visual wave pulses, integrated Text-to-Speech narration, and one-click response copying.
+
+---
+
+## 🏗️ Architecture
 
 ```
-ASTRA_DB_APPLICATION_TOKEN=your-application-token
+EchoMind/
+├── app_flask.py              # Main Flask web application & REST API endpoints
+├── therapeutic_assistant.py  # Therapeutic persona prompt logic & Gemini generation
+├── text_to_vector_db.py      # Semantic chunking, embedding generation & AstraDB queries
+├── astra_connection.py       # High-performance cached AstraDB client connection
+├── dataset/                  # CBT techniques, therapeutic dialogues, and guidance texts
+├── static/
+│   ├── css/style.css         # Modern sanctuary design system with CSS custom properties
+│   ├── js/main.js            # Client-side state, voice input/output & theme controller
+│   └── images/
+│       ├── logo.svg          # EchoMind vector logo emblem
+│       ├── logo.png          # High-resolution 512x512 brand icon
+│       ├── favicon.ico       # Multi-size browser favicon
+│       └── Echomind/         # Application showcase screenshots
+└── templates/
+    └── index.html            # Main therapeutic sanctuary web interface
+```
+
+---
+
+## 🚀 Quick Start
+
+### 1. Prerequisites
+- Python 3.10+ (tested on Python 3.12)
+- DataStax AstraDB account and database
+- Google Gemini API key
+
+### 2. Installation
+```bash
+# Clone the repository
+git clone https://github.com/Bril3d/EchoMind.git
+cd EchoMind
+
+# Create and activate virtual environment
+python -m venv venv
+.\venv\Scripts\activate   # On Windows
+source venv/bin/activate  # On macOS/Linux
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### 3. Environment Configuration
+Create a `.env` file in the root directory:
+
+```env
+ASTRA_DB_APPLICATION_TOKEN=your-astradb-application-token
 ASTRA_DB_API_ENDPOINT=https://your-database-id-your-region.apps.astra.datastax.com
 GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL=gemini-3.5-flash
+SECRET_KEY=your-flask-secret-key
 ```
 
-## Basic Usage
-
-Run the connection script to test your AstraDB connection:
-
-```
-python astra_connection.py
-```
-
-## Text Processing and Vector Storage
-
-The `text_to_vector_db.py` script processes a directory of text files, chunks them, generates embeddings, and stores them in AstraDB as vector embeddings.
-
-### Features
-
-- Processes multiple .txt files in a specified directory
-- Splits text into overlapping chunks for better semantic processing
-- Generates embeddings using SentenceTransformer's MiniLM model
-- Stores text chunks and embeddings in AstraDB as a vector database
-- Provides search functionality to find semantically similar content
-
-### Running the Text Processing Script
-
-```
+### 4. Populate Knowledge Vector Database (Optional / First Run)
+To index the clinical therapeutic texts in AstraDB:
+```bash
 python text_to_vector_db.py
 ```
 
-The script will:
-1. Connect to your AstraDB database
-2. Set up a vector table if it doesn't exist
-3. Prompt you for a directory containing .txt files
-4. Process those files, create chunks, and generate embeddings
-5. Store the chunks and embeddings in AstraDB
-6. Allow you to search for semantically similar content
-
-## Therapeutic Assistant
-
-The `therapeutic_assistant.py` script provides an interactive therapeutic assistant powered by Google's Gemini model and vector search.
-
-### Features
-
-- Retrieves the top 3 most relevant text chunks from AstraDB based on user query
-- Uses Google's Gemini model to generate empathetic, therapeutic responses
-- Incorporates retrieved text as context for more informed and helpful responses
-- Provides source information for transparency
-- Supports multiple languages (English, Arabic, French)
-- Generates positive reflections on conversation history
-
-### Running the Therapeutic Assistant
-
-```
-python therapeutic_assistant.py
-```
-
-The assistant will:
-1. Prompt you to select your preferred language
-2. Ask you to share what's on your mind
-3. Search AstraDB for relevant content based on your input
-4. Generate a thoughtful, therapeutic response using Gemini with the retrieved context
-5. Display the response along with the sources used
-6. Allow you to get a positive reflection on your conversation by typing "reflect"
-
-## Conversation Reflection
-
-A unique feature of EchoMind is its ability to analyze conversation history and provide insightful, positive reflections:
-
-- Identifies recurring themes and patterns in user messages
-- Highlights strengths and growth opportunities
-- Offers supportive perspective that fosters hope
-- Provides brief, empathetic takeaways in the user's chosen language
-- Available after at least two exchanges with the assistant
-
-How to use it:
-- In CLI: Type "reflect" during your conversation
-- In web app: Click the "Generate Reflection" button
-- Automatic: Receive a reflection when ending a conversation
-
-## Streamlit Web Application
-
-The repository also includes a web-based interface built with Streamlit, providing a user-friendly way to interact with the therapeutic assistant.
-
-### Features
-
-- Clean, modern UI for interacting with the assistant
-- Chat-like interface that maintains conversation history
-- Shows sources used for generating responses
-- Responsive design that works on desktop and mobile
-- Multilingual support with language selector (English, Arabic, French)
-- UI elements automatically adapt to the selected language
-- One-click generation of positive reflections on your conversation
-
-### Running the Streamlit App
-
-```
-streamlit run app.py
-```
-
-The web app will:
-1. Start a local web server (typically at http://localhost:8501)
-2. Provide a language selector to choose your preferred language
-3. Display a text area for entering your thoughts or concerns
-4. Generate and display calming responses based on relevant information in the vector database
-5. Maintain conversation history during your session
-6. Show the sources of information used in an expandable section
-7. Allow generating reflections on your conversation with the "Generate Reflection" button
-
-## Flask Web Application
-
-The repository also includes a Flask-based version of the web interface, providing an alternative implementation of the therapeutic assistant.
-
-### Features
-
-- All the same features as the Streamlit version
-- Built using Flask, HTML, CSS, and JavaScript
-- Server-side session management with Flask-Session
-- RESTful API endpoints for all app functionality
-
-### Running the Flask App
-
-```
+### 5. Run the Application
+Start the Flask web app:
+```bash
 python app_flask.py
 ```
+Open **[http://localhost:5000](http://localhost:5000)** in your browser.
 
-The Flask app will:
-1. Start a local web server at http://localhost:5000
-2. Provide the same core functionality as the Streamlit version
-3. Use server-side sessions to maintain conversation history
-4. Offer a more customizable frontend implementation
+---
 
-## Multilingual Support
+## 🌐 Multilingual Capabilities
 
-The application supports the following languages:
-- English
-- Arabic (العربية)
-- French (Français)
+EchoMind natively adapts its persona, UI copy, and reflections:
+- **English:** Default therapeutic persona and guidance.
+- **العربية:** Full Right-to-Left (RTL) layout mirroring and empathetic Arabic therapeutic framing.
+- **Français:** Thoughtful, respectful French guidance and localized interaction controls.
 
-The language support includes:
-- UI elements (buttons, placeholders, labels)
-- Therapeutic responses
-- Error messages
-- Welcome messages
+---
 
-When you select a non-English language, the system will:
-1. Retrieve relevant content from the database (which may be in English)
-2. Use Gemini to generate a response in your selected language
-3. Translate key insights from the content into your language
-
-## Integrating with Your Application
-
-You can import and use the functions in your own Python files:
-
-```python
-from astra_connection import connect_to_astradb
-from text_to_vector_db import process_text_files, store_in_astradb, search_similar_text
-from therapeutic_assistant import generate_therapeutic_response, generate_positive_reflection
-
-# Get a database connection
-db = connect_to_astradb()
-
-# Process text files
-chunks = process_text_files("/path/to/text/files")
-
-# Store in AstraDB
-store_in_astradb(db, chunks)
-
-# Search for similar text
-results = search_similar_text(db, "your search query")
-
-# Generate a therapeutic response in a specific language
-response = generate_therapeutic_response(
-    "I've been feeling anxious lately", 
-    language="french"  # Use "english", "arabic", or "french"
-)
-
-# Generate a positive reflection on conversation history
-conversation_history = [
-    {"role": "user", "content": "I've been feeling overwhelmed lately."},
-    {"role": "assistant", "content": "I understand that feeling overwhelmed can be difficult..."},
-    {"role": "user", "content": "Yes, especially with work and family responsibilities."}
-]
-reflection = generate_positive_reflection(
-    conversation_history,
-    language="english"
-) 
+## 🔒 Confidentiality & Disclaimer
+*EchoMind provides mindfulness, emotional support, and therapeutic reflections based on CBT concepts. It does not replace professional clinical treatment or medical crisis intervention. If you are experiencing a crisis, please reach out to licensed emergency mental health professionals.*

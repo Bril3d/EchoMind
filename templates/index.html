@@ -1,230 +1,230 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="{{ language }}" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EchoMind Therapeutic Assistant</title>
+    <title>EchoMind — Calming Therapeutic Sanctuary</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/logo.svg') }}">
+    <link rel="alternate icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+
+    <!-- Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Main Style -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
-<body>
-    <div class="app-wrapper">
-        <nav class="navbar">
-            <div class="navbar-brand">
-                <h1>EchoMind</h1>
-            </div>
-            <div class="navbar-menu">
-                <div class="theme-toggle">
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="theme-toggle">
-                        <span class="toggle-slider"></span>
-                        <i class="fas fa-moon"></i>
-                        <i class="fas fa-sun"></i>
-                    </label>
-                </div>
-                <div class="auth-buttons" id="auth-section">
-                    <button id="login-btn" class="auth-btn">Login</button>
-                    <button id="signup-btn" class="auth-btn">Sign Up</button>
-                </div>
-                <div class="user-profile hidden" id="user-profile">
-                    <span id="username-display">User</span>
-                    <button id="logout-btn" class="auth-btn">Logout</button>
-                </div>
-            </div>
-        </nav>
+<body class="lang-{{ language }}">
+    <!-- Background Aura Glows -->
+    <div class="ambient-glow glow-top"></div>
+    <div class="ambient-glow glow-bottom"></div>
 
-        <div class="container">
-            <header>
-                <p class="app-subtitle">A calming presence for your mental wellbeing journey</p>
-                
-                <div class="settings-controls">
-                    <div class="language-selector">
-                        <label for="language-select">Select Language / اختر اللغة / Choisir la langue</label>
-                        <select id="language-select">
-                            {% for lang_code, lang_name in language_options %}
-                                <option value="{{ lang_code }}" {% if lang_code == language %}selected{% endif %}>{{ lang_name }}</option>
-                            {% endfor %}
-                        </select>
+    <div class="app-layout">
+        <!-- Sanctuary Navigation Header -->
+        <header class="app-navbar">
+            <div class="nav-brand">
+                <div class="logo-wrapper">
+                    <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="EchoMind Logo" class="brand-logo" onerror="this.src='{{ url_for('static', filename='images/logo.png') }}'">
+                    <span class="logo-pulse"></span>
+                </div>
+                <div class="brand-text">
+                    <div class="brand-title-row">
+                        <h1 class="brand-name">EchoMind</h1>
+                        <span class="status-badge" title="AI Sanctuary Active">
+                            <span class="status-dot"></span>
+                            <span class="status-label">Sanctuary Online</span>
+                        </span>
                     </div>
-                    
-                    <div class="tts-control">
-                        <label for="tts-toggle">Text-to-Speech</label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="tts-toggle" {% if tts_enabled %}checked{% endif %}>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    
-                    <div class="temperature-control">
-                        <label for="temperature-slider">AI Creativity Level: <span id="temperature-value">{{ temperature }}</span></label>
-                        <input type="range" id="temperature-slider" min="0" max="1" step="0.1" value="{{ temperature }}">
-                        <div class="temperature-labels">
-                            <span>Focused</span>
-                            <span>Creative</span>
+                    <p class="brand-tagline">Compassionate AI for your mental wellbeing</p>
+                </div>
+            </div>
+
+            <!-- Header Quick Actions -->
+            <div class="nav-controls">
+                <!-- Language Selector Pill -->
+                <div class="control-pill language-pill" title="Switch Language">
+                    <i class="fas fa-globe pill-icon"></i>
+                    <select id="language-select" aria-label="Select Language">
+                        {% for lang_code, lang_name in language_options %}
+                            <option value="{{ lang_code }}" {% if lang_code == language %}selected{% endif %}>{{ lang_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <i class="fas fa-chevron-down select-arrow"></i>
+                </div>
+
+                <!-- Text-to-Speech Toggle Pill -->
+                <label class="control-pill tts-pill" title="Toggle Voice Narration">
+                    <i class="fas fa-volume-high pill-icon"></i>
+                    <span class="pill-label">Voice</span>
+                    <input type="checkbox" id="tts-toggle" {% if tts_enabled %}checked{% endif %} class="toggle-checkbox">
+                    <span class="pill-switch"></span>
+                </label>
+
+                <!-- Theme Toggle Button -->
+                <button id="theme-toggle-btn" class="icon-pill-btn" title="Toggle Twilight / Light Mode" aria-label="Toggle Theme">
+                    <i class="fas fa-moon theme-icon-dark"></i>
+                    <i class="fas fa-sun theme-icon-light"></i>
+                </button>
+
+                <!-- Clear Session Button -->
+                <button id="clear-button" class="icon-pill-btn danger-hover" title="Clear Conversation" aria-label="Clear Conversation" disabled>
+                    <i class="fas fa-trash-can"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Sanctuary Content -->
+        <main class="sanctuary-container">
+            <!-- Messages Stream -->
+            <section id="chat-container" class="chat-viewport">
+                {% if messages|length == 0 %}
+                    <div class="welcome-card" id="welcome-card">
+                        <div class="welcome-badge">
+                            <i class="fas fa-shield-heart"></i>
+                            <span>Private &amp; Grounding Space</span>
+                        </div>
+                        <div class="welcome-body">
+                            {{ welcome_message|safe }}
+                        </div>
+                        <div class="quick-prompts-section">
+                            <span class="quick-prompts-title">
+                                <i class="fas fa-feather-pointed"></i> Common places to begin:
+                            </span>
+                            <div class="prompt-chips">
+                                <button type="button" class="prompt-chip" data-prompt="I'm feeling a bit overwhelmed and anxious today. Can you help me unpack it?">
+                                    <span>🌿 Feeling overwhelmed</span>
+                                </button>
+                                <button type="button" class="prompt-chip" data-prompt="My thoughts are racing and I'm having trouble relaxing. What's a gentle grounding exercise?">
+                                    <span>🌙 Grounding exercise</span>
+                                </button>
+                                <button type="button" class="prompt-chip" data-prompt="I've been quite harsh on myself lately. How can I practice self-compassion?">
+                                    <span>💭 Practicing self-compassion</span>
+                                </button>
+                                <button type="button" class="prompt-chip" data-prompt="Can you help me reframe a negative thought I keep dwelling on?">
+                                    <span>🌱 Reframe a thought</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </header>
-
-            <div class="tab-container">
-                <div class="tabs">
-                    <button class="tab-btn active" data-tab="chat">Chat</button>
-                    <button class="tab-btn" data-tab="insights">Insights</button>
-                    <button class="tab-btn" data-tab="resources">Resources</button>
-                </div>
-                
-                <div class="tab-content">
-                    <div class="tab-pane active" id="chat-tab">
-                        <main>
-                            <div id="chat-container">
-                                {% if messages|length == 0 %}
-                                    <div class="intro-card">
-                                        {{ welcome_message|safe }}
+                {% else %}
+                    {% for message in messages %}
+                        {% if message.role == 'user' %}
+                            <div class="user-message">
+                                <div class="message-bubble">{{ message.content }}</div>
+                            </div>
+                        {% else %}
+                            <div class="assistant-message">
+                                <div class="assistant-avatar">
+                                    <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="EchoMind Avatar" onerror="this.src='{{ url_for('static', filename='images/logo.png') }}'">
+                                </div>
+                                <div class="assistant-bubble-wrap">
+                                    <div class="message-content">{{ message.content }}</div>
+                                    <div class="message-meta">
+                                        <button class="action-micro-btn read-aloud-btn" title="Read aloud">
+                                            <i class="fas fa-volume-up"></i>
+                                            <span class="btn-micro-text">Listen</span>
+                                        </button>
+                                        <button class="action-micro-btn copy-msg-btn" title="Copy text">
+                                            <i class="fas fa-copy"></i>
+                                            <span class="btn-micro-text">Copy</span>
+                                        </button>
                                     </div>
-                                {% else %}
-                                    {% for message in messages %}
-                                        {% if message.role == 'user' %}
-                                            <div class="user-message">
-                                                {{ message.content }}
-                                            </div>
-                                        {% else %}
-                                            <div class="assistant-message">
-                                                <div class="message-content">{{ message.content }}</div>
-                                                <button class="read-aloud-btn" title="Read aloud"><i class="fas fa-volume-up"></i></button>
-                                            </div>
-                                        {% endif %}
-                                    {% endfor %}
-                                {% endif %}
-
-                                {% if reflection %}
-                                    <div class="reflection-container">
-                                        <span class="reflection-icon">✨</span> <strong>Reflection:</strong> {{ reflection }}
-                                        <button class="read-aloud-btn" title="Read aloud"><i class="fas fa-volume-up"></i></button>
-                                    </div>
-                                {% endif %}
-                            </div>
-
-                            <div id="sources-container" class="hidden">
-                                <div class="sources-header" onclick="toggleSources()">
-                                    <span id="sources-toggle-text">View sources EchoMind consulted</span>
-                                    <i class="fas fa-chevron-down" id="sources-chevron"></i>
-                                </div>
-                                <div class="source-content hidden" id="sources-content"></div>
-                            </div>
-
-                            <div id="input-container">
-                                <textarea id="user-input" placeholder="Share what's on your mind..."></textarea>
-                                <button id="send-button" class="primary-button">
-                                    <i class="fas fa-paper-plane"></i> Send
-                                </button>
-                            </div>
-
-                            <div id="action-buttons">
-                                <button id="reflection-button" class="action-button reflection-button" disabled>
-                                    <i class="fas fa-sparkles"></i> Generate Reflection
-                                </button>
-                                <button id="clear-button" class="action-button clear-button" disabled>
-                                    <i class="fas fa-trash-alt"></i> Clear Conversation
-                                </button>
-                            </div>
-                        </main>
-                    </div>
-                    <div class="tab-pane" id="insights-tab">
-                        <div class="insights-container">
-                            <h2>Conversation Insights</h2>
-                            <div class="insights-content">
-                                <div class="no-insights-message">
-                                    <i class="fas fa-chart-line"></i>
-                                    <p>Your conversation insights will appear here as you chat with EchoMind</p>
-                                </div>
-                                <div id="insights-data" class="hidden">
-                                    <!-- Insights will be populated dynamically -->
                                 </div>
                             </div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+
+                {% if reflection %}
+                    <div class="reflection-container">
+                        <div class="reflection-header">
+                            <span class="reflection-icon">✨</span>
+                            <span class="reflection-title">Mindful Reflection &amp; Growth</span>
+                        </div>
+                        <div class="reflection-text">{{ reflection }}</div>
+                        <div class="reflection-actions">
+                            <button class="action-micro-btn read-aloud-btn" title="Read reflection aloud">
+                                <i class="fas fa-volume-up"></i>
+                                <span class="btn-micro-text">Listen</span>
+                            </button>
+                            <button class="action-micro-btn copy-msg-btn" title="Copy reflection">
+                                <i class="fas fa-copy"></i>
+                                <span class="btn-micro-text">Copy</span>
+                            </button>
                         </div>
                     </div>
-                    <div class="tab-pane" id="resources-tab">
-                        <div class="resources-container">
-                            <h2>Helpful Resources</h2>
-                            <div class="resources-grid">
-                                <div class="resource-card">
-                                    <div class="resource-icon"><i class="fas fa-book"></i></div>
-                                    <h3>Mental Health Articles</h3>
-                                    <p>Explore articles about mental wellbeing and self-care.</p>
-                                </div>
-                                <div class="resource-card">
-                                    <div class="resource-icon"><i class="fas fa-hands-helping"></i></div>
-                                    <h3>Crisis Support</h3>
-                                    <p>Find helplines and resources for immediate support.</p>
-                                </div>
-                                <div class="resource-card">
-                                    <div class="resource-icon"><i class="fas fa-meditation"></i></div>
-                                    <h3>Mindfulness Exercises</h3>
-                                    <p>Practice simple exercises to reduce stress and anxiety.</p>
-                                </div>
-                                <div class="resource-card">
-                                    <div class="resource-icon"><i class="fas fa-user-md"></i></div>
-                                    <h3>Professional Help</h3>
-                                    <p>Connect with mental health professionals.</p>
-                                </div>
-                            </div>
-                        </div>
+                {% endif %}
+            </section>
+
+            <!-- Thinking / Reflection Indicator -->
+            <div id="loading-spinner" class="thinking-bar hidden">
+                <div class="thinking-aura">
+                    <span class="wave-bar bar-1"></span>
+                    <span class="wave-bar bar-2"></span>
+                    <span class="wave-bar bar-3"></span>
+                    <span class="wave-bar bar-4"></span>
+                </div>
+                <p id="thinking-text" class="thinking-caption">EchoMind is reflecting on your message with care...</p>
+            </div>
+
+            <!-- Sources Consulted Drawer -->
+            <div id="sources-container" class="sources-drawer hidden">
+                <div class="sources-header">
+                    <div class="sources-title-group">
+                        <i class="fas fa-book-bookmark sources-icon"></i>
+                        <span id="sources-toggle-text">View therapeutic sources consulted</span>
+                        <span class="sources-counter" id="sources-count-badge">Reference</span>
+                    </div>
+                    <i class="fas fa-chevron-down" id="sources-chevron"></i>
+                </div>
+                <div class="sources-content hidden" id="sources-content"></div>
+            </div>
+
+            <!-- Input Sanctuary Dock -->
+            <div class="docked-input-section">
+                <div class="input-card">
+                    <textarea 
+                        id="user-input" 
+                        rows="1" 
+                        placeholder="Share what's on your mind... (Shift+Enter for new line)"
+                        aria-label="Your thoughts"
+                    ></textarea>
+
+                    <div class="input-actions-cluster">
+                        <button id="mic-button" class="voice-button" title="Start voice input" aria-label="Voice input">
+                            <i class="fas fa-microphone"></i>
+                            <span class="mic-wave"></span>
+                        </button>
+                        <button id="send-button" class="primary-button" aria-label="Send message">
+                            <i class="fas fa-paper-plane"></i>
+                            <span class="send-label">Send</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Auxiliary Controls Bar -->
+                <div class="dock-footer">
+                    <div class="footer-reflection-group">
+                        <button id="reflection-button" class="reflection-button" disabled title="Generate a therapeutic reflection once you have at least 2 exchanges">
+                            <i class="fas fa-sparkles"></i>
+                            <span>Generate Reflection</span>
+                        </button>
+                        <span class="reflection-hint" id="reflection-hint">Needs 2+ exchanges</span>
+                    </div>
+                    <div class="sanctuary-disclaimer">
+                        <span>🌱 Grounded in therapeutic principles. If in urgent crisis, please reach out to emergency wellness resources.</span>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div id="loading-spinner" class="hidden">
-            <div class="spinner"></div>
-            <p id="thinking-text">EchoMind is reflecting on your message...</p>
-        </div>
-    </div>
-    
-    <!-- Auth Modals -->
-    <div id="login-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2>Login</h2>
-            <form id="login-form">
-                <div class="form-group">
-                    <label for="login-email">Email</label>
-                    <input type="email" id="login-email" required>
-                </div>
-                <div class="form-group">
-                    <label for="login-password">Password</label>
-                    <input type="password" id="login-password" required>
-                </div>
-                <button type="submit" class="auth-submit-btn">Login</button>
-            </form>
-        </div>
-    </div>
-    
-    <div id="signup-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2>Sign Up</h2>
-            <form id="signup-form">
-                <div class="form-group">
-                    <label for="signup-name">Name</label>
-                    <input type="text" id="signup-name" required>
-                </div>
-                <div class="form-group">
-                    <label for="signup-email">Email</label>
-                    <input type="email" id="signup-email" required>
-                </div>
-                <div class="form-group">
-                    <label for="signup-password">Password</label>
-                    <input type="password" id="signup-password" required>
-                </div>
-                <button type="submit" class="auth-submit-btn">Sign Up</button>
-            </form>
-        </div>
+        </main>
     </div>
 
-    <script src="{{ url_for('static', filename='js/tabs.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
-</html> 
+</html>

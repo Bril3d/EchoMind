@@ -17,5 +17,10 @@ __pycache__
 
 converations/*
 
-.venv/
+venv/
+venv/*
+.env.*
 flask_sessions/*
+
+skills-lock.json
+.agents/

@@ -12,10 +12,10 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise ValueError("GEMINI_API_KEY environment variable is required")
 
-genai.configure(api_key=GEMINI_API_KEY)
+genai.configure(api_key=GEMINI_API_KEY, transport="rest")
 
-# Define the model name
-GEMINI_MODEL = "gemini-2.0-flash"  # Using the currently available model name
+# Define the model name (gemini-3.5-flash responds in ~2s)
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
 
 # Supported languages
 SUPPORTED_LANGUAGES = {
@@ -111,11 +111,7 @@ Respond in {language}, using a thoughtful, empathetic tone.
 
 
 def generate_therapeutic_response(
-    user_query: str,
-    top_k: int = 3,
-    conversation_history=None,
-    language="english",
-    temperature=0.3,
+    user_query: str, top_k: int = 3, conversation_history=None, language="english"
 ):
     """
     Retrieve relevant text chunks from AstraDB based on the user query,
@@ -126,8 +122,6 @@ def generate_therapeutic_response(
         top_k: Number of relevant chunks to retrieve (default: 3)
         conversation_history: Optional list of previous messages for context
         language: Language for the response (default: english)
-        temperature: Controls the randomness of responses (0.0 to 1.0, default: 0.3)
-                     Lower values are more deterministic, higher values more creative
 
     Returns:
         A therapeutic response from Gemini
@@ -199,9 +193,8 @@ def generate_therapeutic_response(
         # Initialize Gemini model
         model = genai.GenerativeModel(GEMINI_MODEL)
 
-        # Generate the response with the specified temperature
-        generation_config = {"temperature": temperature}
-        response = model.generate_content(prompt, generation_config=generation_config)
+        # Generate the response
+        response = model.generate_content(prompt)
 
         # Return the response and sources
         return {"response": response.text, "sources": sources}
@@ -218,9 +211,7 @@ def generate_therapeutic_response(
         return {"response": error_msg, "sources": []}
 
 
-def generate_positive_reflection(
-    conversation_history, language="english", temperature=0.3
-):
+def generate_positive_reflection(conversation_history, language="english"):
     """
     Analyze the user's messages from the conversation history and generate
     a short positive reflection or takeaway using Gemini.
@@ -228,8 +219,6 @@ def generate_positive_reflection(
     Args:
         conversation_history: List of message dictionaries with 'role' and 'content' keys
         language: Language for the reflection (default: english)
-        temperature: Controls the randomness of responses (0.0 to 1.0, default: 0.3)
-                     Lower values are more deterministic, higher values more creative
 
     Returns:
         A dictionary containing the reflection text
@@ -274,9 +263,8 @@ def generate_positive_reflection(
         # Initialize Gemini model
         model = genai.GenerativeModel(GEMINI_MODEL)
 
-        # Generate the reflection with the specified temperature
-        generation_config = {"temperature": temperature}
-        response = model.generate_content(prompt, generation_config=generation_config)
+        # Generate the reflection
+        response = model.generate_content(prompt)
 
         return {"reflection": response.text}
 
